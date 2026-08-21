@@ -27,6 +27,10 @@ const APP = join(HERE, '..');
 const ROOT = join(APP, '..');
 
 const SKIP_DIRS = new Set(['node_modules', '.git', '.claude', 'dist', 'data']);
+// 동봉 배포물에만 있는 자리. Chromium 런타임은 감사 범위 밖으로 **먼저 신고**하고
+// 무결성은 해시로 보인다(app/vendor/MANIFEST.json) — 텍스트로 훑는 대상이 아니다.
+// 같은 vendor 아래의 fullcalendar 는 훑는다(우리가 화면에 로드하는 코드다).
+const SKIP_PREFIX = ['app/vendor/electron/'];
 const TEXT_EXT = new Set(['.js', '.mjs', '.cjs', '.json', '.html', '.css', '.md', '.yml', '.yaml',
   '.bat', '.cmd', '.cs', '.ps1', '.manifest', '.ics', '.txt', '']);
 
@@ -81,7 +85,9 @@ function walk(dir, out) {
     try { st = statSync(p); } catch (e) { continue; }
     if (st.isDirectory()) { walk(p, out); continue; }
     if (!TEXT_EXT.has(extname(name).toLowerCase())) continue;
-    out.push({ path: relative(ROOT, p).split(sep).join('/'), size: st.size });
+    const rp = relative(ROOT, p).split(sep).join('/');
+    if (SKIP_PREFIX.some(x => rp.startsWith(x))) continue;
+    out.push({ path: rp, size: st.size });
   }
   return out;
 }
@@ -142,22 +148,51 @@ for (const s of stale) {
   console.log(`    FAIL  신고 목록의 ${s.path} 가 트리에 없습니다 — 죽은 근거입니다. audit.mjs 에서 빼세요.`);
 }
 
-const steps = [['check', '문법'], ['lint', '가드레일'], ['test', '단위·회귀']];
-for (const [npmScript, label] of steps) {
-  process.stdout.write(`[4] npm run ${npmScript.padEnd(6)} (${label}) … `);
+/** 동봉 배포물이면 그 사실과 무결성 목록을 함께 보고한다. */
+function vendorReport() {
+  const mf = join(ROOT, 'app', 'vendor', 'MANIFEST.json');
+  if (!existsSync(mf)) {
+    console.log('  app/vendor/ 없음 — 소스 배포입니다(런타임은 별도로 준비하십시오).');
+    return;
+  }
+  let m;
+  try { m = JSON.parse(readFileSync(mf, 'utf8')); } catch (e) { console.log('  MANIFEST.json 을 읽지 못했습니다'); return; }
+  const bytes = (m.files || []).reduce((n, f) => n + (f.size || 0), 0);
+  console.log(`  app/vendor/electron/ — Chromium 런타임 ${(m.files || []).length}개 파일 · ` +
+    `${(bytes / 1024 / 1024).toFixed(0)}MB. 네트워크 스택이 바이너리에 링크되어 있어 코드로`);
+  console.log('      제거할 수 없습니다. 감사 범위 밖으로 합의된 부분이며, 모든 파일의 sha256 이');
+  console.log('      app/vendor/MANIFEST.json 에 있습니다. 실행 중 관측은 docs/AUDIT.md 절차를 따르십시오.');
+  for (const p of (m.patches || [])) {
+    console.log(`  ${p.file} — 동봉하며 패치했습니다: ${(p.changes || []).join(' · ')}`);
+  }
+}
+
+// 검사는 npm 을 거치지 않고 **지금 이 인터프리터로** 직접 돌린다.
+// 동봉 배포물에는 Node.js 도 npm 도 없다(런타임은 app/vendor/electron 하나뿐이고,
+// audit.bat 이 그것을 Node 로 써서 이 스크립트를 부른다). npm 을 부르면 그 자리에서 멈춘다.
+const steps = [
+  ['문법', [join(APP, 'scripts', 'check-syntax.mjs')]],
+  ['가드레일', [join(APP, 'scripts', 'lint-all.mjs')]],
+  ['단위·회귀', ['--test', join(APP, 'test')]],
+];
+for (const [label, args] of steps) {
+  process.stdout.write(`[4] ${label.padEnd(8)} … `);
   try {
-    // shell:true — 윈도우에서 Node 는 .cmd 를 셸 없이 실행하지 않는다(EINVAL).
-    const out = execFileSync('npm', ['run', npmScript],
-      { cwd: APP, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], shell: true });
-    const last = out.trim().split('\n').filter(l => l.trim()).pop() || '';
+    const out = execFileSync(process.execPath, args, {
+      cwd: APP, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+      env: Object.assign({}, process.env, { ELECTRON_RUN_AS_NODE: '1' }),
+    });
+    const last = out.trim().split('
+').filter(l => l.trim()).pop() || '';
     console.log('OK  ' + last.trim().slice(0, 90));
   } catch (e) {
     failed = true;
     console.log('FAIL');
-    console.log((e.stdout || '').split('\n').slice(-12).join('\n'));
+    console.log(((e.stdout || '') + (e.stderr || '')).split('
+').slice(-12).join('
+'));
   }
 }
-
 console.log('[5] 창 스모크   npm run check:ui — 실제 창을 띄웁니다(별도로 실행하세요)');
 console.log(bar);
 console.log('범위 밖(우리가 먼저 신고합니다):');

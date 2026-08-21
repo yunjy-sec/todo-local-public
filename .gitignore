@@ -17,3 +17,6 @@ data/
 # OS
 Thumbs.db
 Desktop.ini
+
+# 배포 묶음(런타임 동봉, 수백 MB). 생성물이라 커밋하지 않는다.
+dist/
