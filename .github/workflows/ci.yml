@@ -18,6 +18,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 왜 TZ 를 못 박는가
+#   이 앱은 로컬 벽시계로 돈다(반복 회차 키·팝업 시각·ICS 의 TZID 해석). 단일 기기에서
+#   쓰는 도구라 그게 옳은 의미지만, 그래서 시험 픽스처의 '+09:00' 과 기대값의 '09:00' 이
+#   한 시간대에서만 맞는다. 러너 기본값은 UTC 라 지정하지 않으면 반복·상태·ICS 시험이
+#   한꺼번에 무너지고, 실패 메시지는 "09:00 을 기대했는데 00:00" 이라 원인이 시간대라는
+#   말을 아무도 하지 않는다. (test/timezone.test.js 가 그 전제를 먼저 검사한다.)
+env:
+  TZ: Asia/Seoul
+
 permissions:
   contents: read
 

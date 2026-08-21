@@ -1,8 +1,9 @@
 @echo off
 rem ============================================================
-rem  TodoPopup - start the local app (tray + list window)
+rem  TodoPopup - the only file you need to run.
+rem  Double-click        -> tray + list window
+rem  start-todo.bat cal   -> opens the calendar window instead
 rem  Local-only by default. Nothing goes over the network.
-rem  Just double-click this file.
 rem ============================================================
 setlocal
 set "APP=%~dp0app"
@@ -21,7 +22,11 @@ popd
 if not exist "%ELECTRON%" goto FAILED
 
 :RUN
-start "" "%ELECTRON%" "%APP%" %*
+rem  "cal" is a convenience alias so one file covers both windows.
+set "ARGS=%*"
+if /i "%~1"=="cal" set "ARGS=--calendar"
+if /i "%~1"=="calendar" set "ARGS=--calendar"
+start "" "%ELECTRON%" "%APP%" %ARGS%
 exit /b 0
 
 :NONODE

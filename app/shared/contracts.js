@@ -54,7 +54,8 @@
   var IPC_KINDS = ['invoke', 'event'];
 
   // 설정 필드 타입.
-  var SETTING_TYPES = ['bool', 'int', 'ratio', 'enum', 'string', 'intlist'];
+  // timezone 은 string 이되 값이 실재하는 IANA 이름이어야 한다(오타면 기본값으로 되돌린다).
+  var SETTING_TYPES = ['bool', 'int', 'ratio', 'enum', 'string', 'intlist', 'timezone'];
 
   // 시각 표기. 기본은 24시간(00:00 - 23:59), 12h 는 오전/오후.
   var TIME_FORMATS = ['24h', '12h'];

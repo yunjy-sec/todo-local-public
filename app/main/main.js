@@ -33,6 +33,21 @@ const { fromRfc3339, toRfc3339 } = require('./util');
 // 한 번에 돌려주는 인스턴스 상한. 넘으면 잘렸다는 사실을 함께 알린다.
 const LIST_CAP = 2000;
 
+/**
+ * 앱 전체의 시각 기준을 설정의 시간대로 맞춘다.
+ *
+ * 이 앱은 로컬 벽시계로 돈다 — 팝업이 뜰 시각, 반복 회차 키(instKey), ICS 의 TZID 해석,
+ * 화면 표기가 전부 그렇다. 그 "로컬" 을 기계 설정이 아니라 **앱 설정**이 정하게 한다.
+ * process.env.TZ 한 줄로 Date 전체가 그 기준으로 돌기 때문에, 시각을 다루는 자리마다
+ * 시간대를 넘겨 주는 배관을 만들 필요가 없다(그 배관은 한 군데만 빠져도 조용히 어긋난다).
+ * 창(renderer)은 이 프로세스가 띄우므로 같은 환경을 물려받는다.
+ */
+function applyTimeZone(tz) {
+  if (!tz || process.env.TZ === tz) return;
+  process.env.TZ = tz;
+}
+applyTimeZone(storage.loadSettings().timeZone);
+
 const store = new Store();
 let tray = null;
 let popups = null;
@@ -214,6 +229,14 @@ function setupIpc() {
 
   handle('save-settings', (e, s) => {
     store.saveSettings(s);
+    // 시간대를 바꾸면 이미 떠 있는 창은 옛 기준으로 그린 화면을 들고 있다.
+    // 다시 그리게 알려 준다(알람 계산은 다음 틱부터 새 기준으로 돈다).
+    const tzBefore = process.env.TZ;
+    applyTimeZone(store.settings.timeZone);
+    if (process.env.TZ !== tzBefore) {
+      windows.broadcast('data-changed');
+      notifyUser('시간대', `시각 기준을 ${store.settings.timeZone} 로 바꿨습니다.`);
+    }
     applyAutostart();
     registerShortcuts();
     if (windows.calendar && !windows.calendar.isDestroyed() && windows.applyCalendarOpacity) {

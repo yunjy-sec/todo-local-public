@@ -83,6 +83,9 @@
     { key: 'calendarOpacity', type: 'ratio', min: 0.3, max: 1, def: 0.8, label: '캘린더 불투명도', ui: 'range', section: 'calendar' },
     { key: 'calendarOpaqueOnFocus', type: 'bool', def: false, label: '포커스 시 불투명', ui: 'check', section: 'calendar' },
     { key: 'snapMinutes', type: 'int', min: 1, max: 60, def: 15, label: '드래그 스냅', ui: 'number', section: 'calendar' },
+    // 이 앱의 시각은 전부 이 시간대의 벽시계다 — 팝업이 뜰 시각, 반복 회차 키, ICS 해석, 표기.
+    // 기본은 KST. 다른 곳에서 쓰면 여기만 바꾸면 되고, 없는 시간대를 넣으면 기본으로 되돌린다.
+    { key: 'timeZone', type: 'timezone', def: 'Asia/Seoul', label: '시간대', ui: 'text', section: 'app' },
     { key: 'hotkeyList', type: 'string', def: 'Control+Alt+T', label: '단축키: 목록', ui: 'text', section: 'app' },
     { key: 'hotkeyNew', type: 'string', def: 'Control+Alt+N', label: '단축키: 새 일정', ui: 'text', section: 'app' },
     { key: 'hotkeyCalendar', type: 'string', def: 'Control+Alt+C', label: '단축키: 캘린더', ui: 'text', section: 'app' },

@@ -188,6 +188,16 @@ function saveOverlay(o) {
 
 
 // 정규화는 SETTINGS_FIELDS 에서 파생된다 — 필드를 추가하면 여기가 저절로 따라온다.
+/** IANA 시간대 이름인가. Intl 이 모르는 이름이면 Date 가 조용히 UTC 로 돈다. */
+function isRealTimeZone(name) {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: name });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function clampSettings(input) {
   const out = {};
   for (const f of REG.SETTINGS_FIELDS) {
@@ -213,6 +223,11 @@ function clampSettings(input) {
         out[f.key] = Array.isArray(v)
           ? v.map(x => parseInt(x, 10)).filter(x => Number.isInteger(x) && x > 0 && x <= 40320)
           : (Array.isArray(f.def) ? f.def.slice() : []);
+        break;
+      // 값이 실재하는 IANA 시간대여야 한다. 오타 하나로 앱 전체의 시각이 어긋나는데,
+      // 보이는 것은 "알림이 9시간 밀린다" 뿐이라 원인을 짚기 어렵다.
+      case 'timezone':
+        out[f.key] = (typeof v === 'string' && isRealTimeZone(v)) ? v : f.def;
         break;
       case 'string':
       default:

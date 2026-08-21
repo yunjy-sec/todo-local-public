@@ -132,6 +132,7 @@
       <div class="f"><label>캘린더 불투명도</label><input id="sCalOpacity" type="range" min="30" max="100"><span id="sCalOpacityVal" class="u"></span></div>
       <div class="f"><label>포커스 시 불투명</label><input id="sCalFocus" type="checkbox"></div>
       <div class="f"><label>드래그 스냅</label><input id="sSnap" type="number" min="1" max="60"><span class="u">분 단위</span></div>
+      <div class="f"><label>시간대</label><input id="sTimeZone" type="text" placeholder="Asia/Seoul"><span class="u">이 앱의 모든 시각 기준 (없는 이름이면 Asia/Seoul 로 되돌립니다)</span></div>
       <div class="f"><label>단축키: 목록</label><input id="sHkList" type="text" placeholder="Control+Alt+T"></div>
       <div class="f"><label>단축키: 새 일정</label><input id="sHkNew" type="text" placeholder="Control+Alt+N"></div>
       <div class="f"><label>단축키: 캘린더</label><input id="sHkCal" type="text" placeholder="Control+Alt+C"></div>
@@ -478,6 +479,7 @@
     $('sCalOpacityVal').textContent = Math.round(s.calendarOpacity * 100) + '%';
     $('sCalFocus').checked = s.calendarOpaqueOnFocus;
     $('sSnap').value = s.snapMinutes;
+    $('sTimeZone').value = s.timeZone;
     $('sHkList').value = s.hotkeyList;
     $('sHkNew').value = s.hotkeyNew;
     $('sHkCal').value = s.hotkeyCalendar;
@@ -500,6 +502,7 @@
       calendarOpacity: parseInt($('sCalOpacity').value, 10) / 100,
       calendarOpaqueOnFocus: $('sCalFocus').checked,
       snapMinutes: parseInt($('sSnap').value, 10),
+      timeZone: $('sTimeZone').value.trim(),
       hotkeyList: $('sHkList').value.trim(),
       hotkeyNew: $('sHkNew').value.trim(),
       hotkeyCalendar: $('sHkCal').value.trim(),

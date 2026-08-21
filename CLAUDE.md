@@ -46,7 +46,7 @@ cd app && npm run audit
 cd app
 npm run check      # 문법
 npm run lint       # 가드레일 11종
-npm test           # 단위·회귀 129건
+npm test           # 단위·회귀 131건 (TZ=Asia/Seoul 전제 — 아래 참고)
 npm run check:ui   # 실제 창 스모크 25항목 (CDP)
 npm run audit      # 통신 흔적 감사 — 이 빌드의 존재 이유
 ```

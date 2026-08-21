@@ -17,7 +17,7 @@ start-todo.bat
 ```
 
 트레이 아이콘으로 상주합니다. **더블클릭** = 목록 창, **우클릭** = 메뉴(새 일정/목록/설정/종료).
-캘린더 창은 `start-calendar.bat` 또는 트레이 메뉴에서 엽니다.
+캘린더 창은 `start-todo.bat cal` 또는 트레이 메뉴·`Ctrl+Alt+C` 로 엽니다.
 
 기본 단축키: `Ctrl+Alt+T` 목록 · `Ctrl+Alt+N` 새 일정 · `Ctrl+Alt+C` 캘린더.
 
@@ -68,6 +68,6 @@ npm run audit      # 감사 보고서
 
 | 플래그 | 하는 일 |
 |---|---|
-| `--calendar` | 캘린더 창으로 바로 연다 (`start-calendar.bat` 이 이것을 쓴다) |
+| `--calendar` | 캘린더 창으로 바로 연다 (`start-todo.bat cal` 이 이것을 넘긴다) |
 | `--hidden` | 창 없이 트레이로만 시작한다 (윈도우 시작 시 자동 실행에 쓴다) |
 | `--test-popup` | 팝업을 한 번 띄워 위치·크기·투명도를 눈으로 확인한다 |
