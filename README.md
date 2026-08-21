@@ -10,11 +10,25 @@
 cd app && npm run audit
 ```
 
-## 실행
+## 실행 — Node.js 없이도 됩니다
 
 ```bat
 start-todo.bat
 ```
+
+이 파일 하나가 알아서 고릅니다.
+
+| | 필요한 것 | 되는 것 |
+|---|---|---|
+| **Electron 빌드** | Node.js 와 의존성(별도 동봉) | 전부 — 캘린더 창(일/주/월/연), `.ics` 파일 구독 |
+| **`TodoPopup.exe`** | **아무것도** — 윈도우 내장 `csc.exe`(.NET Framework 4.x) | 팝업 · 목록 · 트레이 · 설정 · 자연어 입력 |
+
+`app/node_modules/electron` 이 있으면 그것으로, 없으면 **그 자리에서 `TodoPopup.exe`(52KB)를
+빌드해 실행합니다.** SDK도 Visual Studio도 인터넷도 필요 없습니다 — 윈도우가 들고 있는
+컴파일러를 씁니다. **런처는 아무것도 내려받지 않습니다.**
+
+폐쇄망에 반입할 때 의존성을 동봉하지 못했다면 `TodoPopup.exe` 쪽이 답입니다.
+두 방식은 같은 데이터를 씁니다(`%APPDATA%\TodoPopup	odos.json`, 같은 스키마).
 
 트레이 아이콘으로 상주합니다. **더블클릭** = 목록 창, **우클릭** = 메뉴(새 일정/목록/설정/종료).
 캘린더 창은 `start-todo.bat cal` 또는 트레이 메뉴·`Ctrl+Alt+C` 로 엽니다.
