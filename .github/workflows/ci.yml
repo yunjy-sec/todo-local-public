@@ -48,6 +48,13 @@ jobs:
         with:
           node-version: 22
 
+      # 윈도우 Node 는 **시작 시점의** TZ 환경변수를 무시하고 OS 시간대를 쓴다
+      # (런타임에 process.env.TZ 를 바꾸는 것만 먹는다). 그래서 위의 env: TZ 만으로는
+      # 러너가 UTC 로 돌고 시험이 무너진다 - OS 시간대 자체를 바꾼다.
+      - name: Set OS timezone (Windows ignores the TZ env var at startup)
+        shell: cmd
+        run: tzutil /s "Korea Standard Time"
+
       - name: Install
         working-directory: app
         run: npm install --no-audit --no-fund

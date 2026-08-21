@@ -58,3 +58,17 @@ test('로컬 벽시계 해석이 실제로 그렇게 동작한다', () => {
   assert.strictEqual(withOffset.getHours(), 9,
     '픽스처의 +09:00 시각이 로컬 벽시계로 9시로 읽혀야 나머지 시험의 기대값이 성립한다');
 });
+
+test('표기는 설정 시간대로 그린다 (창은 OS 시간대를 물려받으므로 표기에서 맞춘다)', () => {
+  const fmt = require('../shared/format.js');
+  const d = new Date('2026-08-25T09:00:00+09:00');
+
+  assert.strictEqual(fmt.time(d, { timeZone: 'Asia/Seoul' }), '09:00');
+  assert.strictEqual(fmt.time(d, { timeZone: 'America/New_York' }), '20:00',
+    '창이 다른 시간대에 있어도 설정한 기준으로 그려야 한다');
+  // 날짜 경계도 함께 움직여야 한다 — 안 그러면 자정 근처에서 "오늘/내일"이 뒤바뀐다.
+  assert.strictEqual(fmt.dateTime(d, { timeZone: 'America/New_York' }), '8월 24일 (월) 20:00');
+
+  // 없는 이름은 조용히 호스트 기준으로 떨어진다(설정 저장에서 이미 걸러진다).
+  assert.strictEqual(fmt.time(d, { timeZone: 'Asia/Seuol' }), fmt.time(d, {}));
+});

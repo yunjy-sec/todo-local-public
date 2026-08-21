@@ -262,7 +262,7 @@
     if (!r.title) { p.className = 'warn'; p.textContent = '할 일 내용을 입력하세요'; return; }
     const past = !r.allDay && r.when <= new Date();
     p.className = past ? 'warn' : '';
-    const range = r.allDay ? TD_FORMAT.allDay(r.when)
+    const range = r.allDay ? TD_FORMAT.allDay(r.when, settings)
       : fmtKorean(r.when) + (r.end ? ' ~ ' + fmtTime(r.end) : '');
     p.textContent = `알림 ${range} (${r.source}) · ${r.title}` + (past ? ' — 지난 시간, 즉시 알림' : '');
   }
@@ -364,7 +364,7 @@
     t.textContent = it.title;
     const sub = document.createElement('div');
     sub.className = 'sub';
-    const parts = [it.allDay ? TD_FORMAT.allDay(start) : fmtList(start, now)];
+    const parts = [it.allDay ? TD_FORMAT.allDay(start, settings) : fmtList(start, now)];
     if (it.recurring && it.recurDesc) parts.push('↻ ' + it.recurDesc);
     else if (it.recurring) parts.push('↻ 반복');
     if (it.reminderMinutes && it.reminderMinutes.length) parts.push('미리 ' + it.reminderMinutes.join('·') + '분');
