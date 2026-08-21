@@ -1,0 +1,34 @@
+{
+  "services": [
+    {
+      "id": "local",
+      "type": "local",
+      "name": "이 컴퓨터",
+      "accounts": [
+        {
+          "id": "local",
+          "label": "로컬 캘린더",
+          "calendars": [
+            {
+              "id": "default",
+              "summary": "내 캘린더",
+              "backgroundColor": "#039be5",
+              "selected": true,
+              "alarmsEnabled": true,
+              "primary": true,
+              "accessRole": "owner"
+            },
+            {
+              "id": "work",
+              "summary": "업무",
+              "backgroundColor": "#0b8043",
+              "selected": true,
+              "alarmsEnabled": true,
+              "accessRole": "owner"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

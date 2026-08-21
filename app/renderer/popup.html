@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  html, body { overflow: hidden; }
+  body { display: flex; flex-direction: column; border: 1px solid #b2b6c0; height: 100vh; }
+  .header {
+    -webkit-app-region: drag;
+    display: flex; align-items: center; gap: 8px;
+    height: 26px; padding: 0 10px;
+    background: #f4f4f6; color: #60646e; font-size: 12px;
+    flex: none; user-select: none;
+  }
+  .header .right { margin-left: auto; color: #969aa2; font-size: 11px; }
+  .badge {
+    font-size: 11px; padding: 1px 8px; border-radius: 10px;
+    background: #fef3cd; color: #7a5b0a; border: 1px solid #f3dd8e;
+  }
+  .body { flex: 1; padding: 6px 14px 0; user-select: text; overflow: hidden; }
+  .title {
+    font-size: 15px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .info { color: #60646e; margin-top: 5px; }
+  .note { color: #969aa2; font-size: 11px; margin-top: 4px; }
+  .buttons { -webkit-app-region: no-drag; display: flex; gap: 5px; padding: 5px 8px 8px; flex: none; }
+  .buttons button { flex: 1; padding: 6px 0; }
+  .buttons .more { flex: 0 0 26px; padding: 7px 0; color: #60646e; }
+  .menu {
+    position: fixed; background: #fff; border: 1px solid #cbced5; border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.15); display: none; z-index: 10; min-width: 110px;
+  }
+  .menu div { padding: 7px 14px; cursor: pointer; }
+  .menu div:hover { background: #f4f5f7; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <span>≡ 할 일 알림</span>
+    <span class="badge" id="preBadge" style="display:none"></span>
+    <span class="right">드래그로 이동</span>
+  </div>
+  <div class="body">
+    <div class="title" id="title"></div>
+    <div class="info" id="info"></div>
+    <div class="note" id="note"></div>
+  </div>
+  <div class="buttons">
+    <button id="btnAck">확인</button>
+    <button id="btnSnooze"></button>
+    <button class="more" id="btnMore">▾</button>
+    <button class="primary" id="btnDone">완료</button>
+    <button class="danger-text" id="btnCancel">취소</button>
+  </div>
+  <div class="menu" id="menu"></div>
+
+<script src="../shared/format.js"></script>
+<script>
+(() => {
+  let data = null;
+
+  const $ = id => document.getElementById(id);
+
+  // 시각 표기는 shared/format.js 에서 나온다(설정을 팝업도 따른다).
+  function fmtClock(d) {
+    return TD_FORMAT.time(d, data || {});
+  }
+
+  function updateInfo() {
+    if (!data) return;
+    const due = new Date(data.dueIso);
+    const now = new Date();
+    const diffMin = Math.floor((now - due) / 60000);
+    let rel;
+    if (data.kind !== 'due') {
+      const ahead = Math.max(0, Math.ceil((due - now) / 60000));
+      rel = `${ahead}분 후 시작`;
+    } else if (diffMin < 1 && diffMin > -1) rel = '지금';
+    else if (diffMin < 0) rel = '곧';
+    else if (diffMin < 60) rel = `${diffMin}분 지남`;
+    else rel = `${Math.floor(diffMin / 60)}시간 ${diffMin % 60}분 지남`;
+
+    $('info').textContent = data.kind === 'due'
+      ? `${fmtClock(due)} 예정 · ${rel} · ${data.notifyCount}번째 알림`
+      : `${fmtClock(due)} 예정 · ${rel}`;
+  }
+
+  function act(action, minutes) {
+    if (!data) return;
+    window.api.invoke('popup-action', {
+      popupKey: data.popupKey, masterId: data.masterId, key: data.key,
+      kind: data.kind, action, minutes: minutes || 0, isPreview: data.isPreview,
+    });
+  }
+
+  window.api.on('popup-init', d => {
+    data = d;
+    $('title').textContent = d.title;
+    $('btnSnooze').textContent = `${d.defaultSnoozeMinutes}분 뒤`;
+    if (d.kind !== 'due') {
+      $('preBadge').style.display = '';
+      $('preBadge').textContent = `${d.preMinutes}분 전 미리 알림`;
+      $('note').textContent = d.isPreview ? '미리보기입니다' : '아직 시작 전입니다 — 정시에 다시 알립니다';
+    } else {
+      $('note').textContent = d.isPreview
+        ? '미리보기입니다 — 아무 버튼이나 누르면 닫힙니다'
+        : `완료·취소 전까지 ${d.renotifyMinutes}분마다 다시 알립니다`;
+    }
+    updateInfo();
+  });
+
+  setInterval(updateInfo, 30000);
+
+  $('btnAck').onclick = () => act('ack');
+  $('btnSnooze').onclick = () => act('snooze', data ? data.defaultSnoozeMinutes : 10);
+  $('btnDone').onclick = () => act('done');
+  $('btnCancel').onclick = () => act('cancel');
+
+  // 미루기 메뉴는 registry.SNOOZE_PRESETS 에서 나온다.
+  // 분 값을 창에 두 벌 적으면 등록표를 고쳐도 이 메뉴만 옛날 값으로 남는다.
+  const menu = $('menu');
+  for (const preset of window.api.registry.SNOOZE_PRESETS) {
+    const item = document.createElement('div');
+    item.textContent = preset.label;
+    item.onclick = () => { menu.style.display = 'none'; act('snooze', preset.minutes); };
+    menu.appendChild(item);
+  }
+  $('btnMore').onclick = (e) => {
+    const r = e.target.getBoundingClientRect();
+    menu.style.left = Math.max(4, r.left - 60) + 'px';
+    menu.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    menu.style.top = 'auto';
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  };
+  document.addEventListener('click', (e) => {
+    if (!menu.contains(e.target) && e.target.id !== 'btnMore') menu.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') act('ack');
+  });
+})();
+</script>
+</body>
+</html>

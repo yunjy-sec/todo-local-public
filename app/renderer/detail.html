@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { padding: 12px 14px; overflow-y: auto; font-size: 12px; }
+  h1 { font-size: 14px; margin-bottom: 9px; }
+  .f { margin-bottom: 8px; }
+  .f > label { display: block; font-size: 11.5px; margin-bottom: 3px; color: #5f6470; }
+  .inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  #summary { width: 100%; font-size: 14px; }
+  textarea { width: 100%; resize: vertical; min-height: 56px; }
+  #location { width: 100%; }
+  .scope { background: #fef7e0; border: 1px solid #f3dd8e; border-radius: 6px; padding: 8px 10px;
+           font-size: 12px; margin-bottom: 12px; display: none; }
+  .scope label { margin-right: 12px; }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sw { width: 22px; height: 22px; border-radius: 11px; cursor: pointer; border: 2px solid transparent; }
+  .sw.on { border-color: #202124; }
+  .sw.none { background: #fff; border: 1px dashed #cbced5; position: relative; }
+  .sw.none.on { border: 2px solid #202124; }
+  .rem-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .rem-row input { width: 64px; }
+  #custom { border: 1px solid #e4e6ea; border-radius: 6px; padding: 10px; margin-top: 8px; display: none; }
+  .wd { display: flex; gap: 4px; margin-top: 8px; }
+  .wd button { padding: 4px 0; width: 32px; border-radius: 16px; font-size: 12px; }
+  .wd button.on { background: #dbe8fe; border-color: #a8c7fa; color: #1a56a8; }
+  .footer { display: flex; gap: 8px; margin-top: 16px; }
+  .footer .grow { flex: 1; }
+</style>
+</head>
+<body>
+  <h1 id="hdr">새 일정</h1>
+
+  <div class="scope" id="scopeBox">
+    반복 일정입니다:
+    <label><input type="radio" name="scope" value="single" checked> 이 일정만</label>
+    <label><input type="radio" name="scope" value="all"> 모든 일정</label>
+  </div>
+
+  <div class="f"><input id="summary" type="text" placeholder="제목"></div>
+
+  <div class="f inline">
+    <label style="margin:0">캘린더</label>
+    <select id="calSel"></select>
+  </div>
+
+  <div class="f inline">
+    <input id="sDate" type="date"><input id="sTime" type="time" step="60">
+    <span class="muted">~</span>
+    <input id="eDate" type="date"><input id="eTime" type="time" step="60">
+  </div>
+  <div class="f inline">
+    <label class="inline" style="margin:0"><input id="allDay" type="checkbox"> 종일</label>
+  </div>
+
+  <div class="f">
+    <label>반복</label>
+    <select id="recur">
+      <option value="none">반복 안 함</option>
+      <option value="daily">매일</option>
+      <option value="weekly">매주</option>
+      <option value="monthly">매월</option>
+      <option value="yearly">매년</option>
+      <option value="custom">사용자 지정…</option>
+    </select>
+    <div id="custom">
+      <div class="inline">
+        <input id="cInterval" type="number" min="1" max="99" value="1" style="width:56px">
+        <select id="cFreq">
+          <option value="DAILY">일마다</option>
+          <option value="WEEKLY" selected>주마다</option>
+          <option value="MONTHLY">개월마다</option>
+          <option value="YEARLY">년마다</option>
+        </select>
+      </div>
+      <div class="wd" id="wdRow"></div>
+      <div class="inline" style="margin-top:8px">
+        <label style="margin:0">종료:</label>
+        <select id="cEnd">
+          <option value="never">없음</option>
+          <option value="until">날짜</option>
+          <option value="count">횟수</option>
+        </select>
+        <input id="cUntil" type="date" style="display:none">
+        <input id="cCount" type="number" min="1" max="999" value="10" style="display:none;width:64px">
+      </div>
+    </div>
+  </div>
+
+  <div class="f">
+    <label>미리 알림 <span class="muted">(정시 알림은 항상 옵니다)</span></label>
+    <div id="remList"></div>
+    <button id="remAdd" class="small">+ 미리 알림 추가</button>
+  </div>
+
+  <div class="f">
+    <label>색상</label>
+    <div class="swatches" id="swatches"></div>
+  </div>
+
+  <div class="f"><label>위치</label><input id="location" type="text" placeholder="장소 (선택)"></div>
+  <div class="f"><label>설명</label><textarea id="desc" placeholder="메모 (선택)"></textarea></div>
+
+  <div class="f inline">
+    <label style="margin:0">재알림 간격</label>
+    <input id="renotify" type="number" min="1" max="720" value="5" style="width:64px">
+    <span class="muted small">분마다 (완료·취소 전까지 반복)</span>
+  </div>
+
+  <div class="footer">
+    <button id="btnDelete" class="danger-text" style="display:none">삭제</button>
+    <span class="grow"></span>
+    <button id="btnClose">닫기</button>
+    <button id="btnSave" class="primary">저장</button>
+  </div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let mode = 'new';
+  let form = null;      // edit 모드의 원본
+  let colors = {};
+  let colorSel = null;
+  const WDS = ['월', '화', '수', '목', '금', '토', '일'];
+  const WDCODE = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  const wdOn = new Set();
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function toLocalIso(d) {
+    const off = -d.getTimezoneOffset();
+    const sg = off >= 0 ? '+' : '-';
+    const a = Math.abs(off);
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:00${sg}${pad2(Math.floor(a / 60))}:${pad2(a % 60)}`;
+  }
+  function setDT(dateEl, timeEl, d) {
+    dateEl.value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    timeEl.value = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+  function getDT(dateEl, timeEl) {
+    if (!dateEl.value) return null;
+    const [y, m, d] = dateEl.value.split('-').map(Number);
+    const [hh, mm] = (timeEl.value || '00:00').split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm, 0);
+  }
+
+  // 요일 버튼
+  for (let i = 0; i < 7; i++) {
+    const b = document.createElement('button');
+    b.textContent = WDS[i];
+    b.dataset.code = WDCODE[i];
+    b.onclick = (e) => {
+      e.preventDefault();
+      if (wdOn.has(b.dataset.code)) { wdOn.delete(b.dataset.code); b.classList.remove('on'); }
+      else { wdOn.add(b.dataset.code); b.classList.add('on'); }
+    };
+    $('wdRow').appendChild(b);
+  }
+
+  // 미리 알림 행
+  function addRemRow(minutes) {
+    let val = minutes, unit = 1;
+    if (minutes % 1440 === 0 && minutes >= 1440) { val = minutes / 1440; unit = 1440; }
+    else if (minutes % 60 === 0 && minutes >= 60) { val = minutes / 60; unit = 60; }
+    const row = document.createElement('div');
+    row.className = 'rem-row';
+    row.innerHTML = `<input type="number" min="1" max="999" value="${val}">
+      <select><option value="1">분 전</option><option value="60">시간 전</option><option value="1440">일 전</option></select>
+      <button class="small">✕</button>`;
+    row.querySelector('select').value = String(unit);
+    row.querySelector('button').onclick = (e) => { e.preventDefault(); row.remove(); };
+    $('remList').appendChild(row);
+  }
+  $('remAdd').onclick = (e) => { e.preventDefault(); addRemRow(10); };
+
+  function collectReminders() {
+    const out = [];
+    for (const row of $('remList').querySelectorAll('.rem-row')) {
+      const v = parseInt(row.querySelector('input').value, 10);
+      const u = parseInt(row.querySelector('select').value, 10);
+      if (v > 0) out.push(v * u);
+    }
+    return Array.from(new Set(out)).sort((a, b) => a - b);
+  }
+
+  // 색상 스와치
+  function buildSwatches() {
+    const wrap = $('swatches');
+    wrap.innerHTML = '';
+    const none = document.createElement('div');
+    none.className = 'sw none' + (colorSel === null ? ' on' : '');
+    none.title = '기본';
+    none.onclick = () => { colorSel = null; buildSwatches(); };
+    wrap.appendChild(none);
+    for (const [cid, hex] of Object.entries(colors)) {
+      const d = document.createElement('div');
+      d.className = 'sw' + (colorSel === cid ? ' on' : '');
+      d.style.background = hex;
+      d.title = cid;
+      d.onclick = () => { colorSel = cid; buildSwatches(); };
+      wrap.appendChild(d);
+    }
+  }
+
+  // 반복 UI
+  $('recur').onchange = () => {
+    $('custom').style.display = $('recur').value === 'custom' ? 'block' : 'none';
+  };
+  $('cEnd').onchange = () => {
+    $('cUntil').style.display = $('cEnd').value === 'until' ? '' : 'none';
+    $('cCount').style.display = $('cEnd').value === 'count' ? '' : 'none';
+  };
+  $('cFreq').onchange = () => {
+    $('wdRow').style.display = $('cFreq').value === 'WEEKLY' ? 'flex' : 'none';
+  };
+  $('allDay').onchange = () => {
+    const off = $('allDay').checked;
+    $('sTime').style.display = off ? 'none' : '';
+    $('eTime').style.display = off ? 'none' : '';
+  };
+
+  function buildRrule() {
+    const kind = $('recur').value;
+    if (kind === 'none') return [];
+    const start = getDT($('sDate'), $('sTime')) || new Date();
+    let rule;
+    if (kind === 'daily') rule = 'FREQ=DAILY';
+    else if (kind === 'weekly') rule = 'FREQ=WEEKLY;BYDAY=' + WDCODE[(start.getDay() + 6) % 7];
+    else if (kind === 'monthly') rule = 'FREQ=MONTHLY;BYMONTHDAY=' + start.getDate();
+    else if (kind === 'yearly') rule = 'FREQ=YEARLY';
+    else {
+      const freq = $('cFreq').value;
+      rule = 'FREQ=' + freq;
+      const iv = parseInt($('cInterval').value, 10) || 1;
+      if (iv > 1) rule += ';INTERVAL=' + iv;
+      if (freq === 'WEEKLY') {
+        const days = wdOn.size ? Array.from(wdOn) : [WDCODE[(start.getDay() + 6) % 7]];
+        rule += ';BYDAY=' + days.join(',');
+      }
+      if (freq === 'MONTHLY') rule += ';BYMONTHDAY=' + start.getDate();
+      if ($('cEnd').value === 'until' && $('cUntil').value) {
+        rule += ';UNTIL=' + $('cUntil').value.replace(/-/g, '');
+      } else if ($('cEnd').value === 'count') {
+        rule += ';COUNT=' + (parseInt($('cCount').value, 10) || 1);
+      }
+    }
+    return ['RRULE:' + rule];
+  }
+
+  function parseRruleToUi(recurrence) {
+    const line = (recurrence || []).find(s => typeof s === 'string' && s.toUpperCase().startsWith('RRULE:'));
+    if (!line) { $('recur').value = 'none'; $('recur').onchange(); return; }
+    const parts = {};
+    for (const kv of line.slice(6).split(';')) {
+      const [k, v] = kv.split('=');
+      parts[k.toUpperCase()] = v;
+    }
+    const iv = parseInt(parts.INTERVAL || '1', 10);
+    const simple = iv === 1 && !parts.COUNT && !parts.UNTIL;
+    if (simple && parts.FREQ === 'DAILY') $('recur').value = 'daily';
+    else if (simple && parts.FREQ === 'WEEKLY' && (!parts.BYDAY || parts.BYDAY.split(',').length === 1)) $('recur').value = 'weekly';
+    else if (simple && parts.FREQ === 'MONTHLY') $('recur').value = 'monthly';
+    else if (simple && parts.FREQ === 'YEARLY') $('recur').value = 'yearly';
+    else {
+      $('recur').value = 'custom';
+      $('cFreq').value = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'].includes(parts.FREQ) ? parts.FREQ : 'WEEKLY';
+      $('cInterval').value = iv;
+      wdOn.clear();
+      if (parts.BYDAY) {
+        for (const d of parts.BYDAY.split(',')) {
+          const code = d.replace(/^-?\d/, '');
+          if (WDCODE.includes(code)) wdOn.add(code);
+        }
+      }
+      for (const b of $('wdRow').children) b.classList.toggle('on', wdOn.has(b.dataset.code));
+      if (parts.UNTIL) {
+        $('cEnd').value = 'until';
+        const m = parts.UNTIL.match(/^(\d{4})(\d{2})(\d{2})/);
+        if (m) $('cUntil').value = `${m[1]}-${m[2]}-${m[3]}`;
+      } else if (parts.COUNT) {
+        $('cEnd').value = 'count';
+        $('cCount').value = parts.COUNT;
+      }
+      $('cEnd').onchange();
+      $('cFreq').onchange();
+    }
+    $('recur').onchange();
+  }
+
+  function currentScope() {
+    if ($('scopeBox').style.display === 'none' || !form || !form.recurring) return 'all';
+    const el = document.querySelector('input[name=scope]:checked');
+    return el ? el.value : 'single';
+  }
+
+  // 반복 설정 컨트롤은 "이 일정만" 수정일 때 비활성화
+  function applyScopeUi() {
+    const single = currentScope() === 'single' && form && form.recurring;
+    $('recur').disabled = single;
+    $('custom').style.pointerEvents = single ? 'none' : '';
+    $('custom').style.opacity = single ? .5 : 1;
+  }
+  document.querySelectorAll('input[name=scope]').forEach(r => r.onchange = applyScopeUi);
+
+  async function save() {
+    const start = getDT($('sDate'), $('sTime'));
+    if (!start) return;
+    let end = getDT($('eDate'), $('eTime'));
+    if ($('allDay').checked) {
+      // 화면은 포함(마지막 날), 저장은 exclusive 규약
+      const s0 = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      let e0 = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate()) : s0;
+      if (e0 < s0) e0 = s0;
+      end = new Date(e0.getTime() + 86400000);
+    } else if (!end || end <= start) {
+      end = new Date(start.getTime() + 30 * 60000);
+    }
+    const payload = {
+      summary: $('summary').value.trim() || '(제목 없음)',
+      start: toLocalIso(start),
+      end: toLocalIso(end),
+      allDay: $('allDay').checked,
+      reminderMinutes: collectReminders(),
+      colorId: colorSel,
+      description: $('desc').value.trim(),
+      location: $('location').value.trim(),
+      renotifyMinutes: parseInt($('renotify').value, 10) || 5,
+      calendarId: $('calSel').value || null,
+    };
+    if (mode === 'new') {
+      payload.recurrence = buildRrule();
+      await window.api.invoke('add-event', payload);
+    } else {
+      const scope = currentScope();
+      if (scope === 'all') {
+        // 규칙이 실제로 바뀐 경우에만 전송 (미변경 규칙의 손실·변질 방지)
+        const newR = buildRrule();
+        const oldLine = (form.recurrence || []).find(s => /^RRULE:/i.test(s)) || null;
+        const newLine = newR.length ? newR[0] : null;
+        if ((oldLine || null) !== (newLine || null)) payload.recurrence = newR;
+      }
+      await window.api.invoke('update-event', {
+        masterId: form.masterId, key: form.key, scope, patch: payload,
+      });
+    }
+    window.api.invoke('close-detail');
+  }
+
+  $('btnSave').onclick = save;
+  $('btnClose').onclick = () => window.api.invoke('close-detail');
+  $('btnDelete').onclick = async () => {
+    if (!form) return;
+    if (form.recurring) {
+      const r = await window.api.invoke('confirm', { message: '반복 일정 삭제', buttons: ['이 일정만', '모든 일정', '취소'] });
+      if (r === 0) await window.api.invoke('delete-event', { masterId: form.masterId, key: form.key, scope: 'single' });
+      else if (r === 1) await window.api.invoke('delete-event', { masterId: form.masterId, key: form.key, scope: 'all' });
+      else return;
+    } else {
+      const r = await window.api.invoke('confirm', { message: '이 일정을 삭제할까요?', buttons: ['삭제', '취소'] });
+      if (r !== 0) return;
+      await window.api.invoke('delete-event', { masterId: form.masterId, key: form.key, scope: 'all' });
+    }
+    window.api.invoke('close-detail');
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') window.api.invoke('close-detail');
+    if (e.key === 'Enter' && e.ctrlKey) save();
+  });
+
+  function fillCalSelect(calendars, value) {
+    const sel = $('calSel');
+    sel.innerHTML = '';
+    for (const svc of (calendars && calendars.services) || []) {
+      for (const acc of svc.accounts || []) {
+        for (const cal of acc.calendars || []) {
+          if (cal.accessRole && cal.accessRole !== 'owner' && cal.accessRole !== 'writer') continue;
+          const o = document.createElement('option');
+          o.value = cal.id;
+          o.textContent = acc.label + ' · ' + cal.summary;
+          sel.appendChild(o);
+        }
+      }
+    }
+    if (value) sel.value = value;
+  }
+
+  window.api.on('detail-init', (p) => {
+    colors = p.colors || {};
+    mode = p.mode;
+    $('remList').innerHTML = '';
+    wdOn.clear();
+    for (const b of $('wdRow').children) b.classList.remove('on');
+
+    if (mode === 'edit') {
+      form = p.form;
+      $('hdr').textContent = '일정 수정';
+      $('btnDelete').style.display = '';
+      $('scopeBox').style.display = form.recurring ? 'block' : 'none';
+      const singleRadio = document.querySelector('input[name=scope][value=single]');
+      if (singleRadio) singleRadio.checked = true; // 창 재사용 시 초기화
+      $('summary').value = form.summary;
+      const s = new Date(form.start);
+      let e = new Date(form.end);
+      if (form.allDay) e = new Date(e.getTime() - 86400000); // exclusive → 화면은 마지막 날 표시
+      setDT($('sDate'), $('sTime'), s);
+      setDT($('eDate'), $('eTime'), e);
+      $('allDay').checked = form.allDay;
+      $('allDay').onchange();
+      parseRruleToUi(form.recurrence);
+      for (const m of form.reminderMinutes || []) addRemRow(m);
+      colorSel = form.colorId || null;
+      $('location').value = form.location || '';
+      $('desc').value = form.description || '';
+      $('renotify').value = form.renotifyMinutes;
+      fillCalSelect(p.calendars, form.calendarId);
+      applyScopeUi();
+    } else {
+      form = null;
+      $('hdr').textContent = '새 일정';
+      $('btnDelete').style.display = 'none';
+      $('scopeBox').style.display = 'none';
+      const preset = p.preset || {};
+      $('summary').value = preset.summary || '';
+      const s = preset.start ? new Date(preset.start) : new Date(Date.now() + 3600000);
+      let e = preset.end ? new Date(preset.end) : new Date(s.getTime() + 30 * 60000);
+      if (preset.allDay && preset.end) e = new Date(e.getTime() - 86400000); // exclusive → 마지막 날
+      setDT($('sDate'), $('sTime'), s);
+      setDT($('eDate'), $('eTime'), e);
+      $('allDay').checked = !!preset.allDay;
+      $('allDay').onchange();
+      $('recur').value = 'none';
+      $('recur').onchange();
+      colorSel = null;
+      $('location').value = '';
+      $('desc').value = '';
+      $('renotify').value = (p.settings && p.settings.defaultRenotifyMinutes) || 5;
+      for (const m of (p.settings && p.settings.defaultReminderMinutes) || []) addRemRow(m);
+      fillCalSelect(p.calendars, (p.settings && p.settings.defaultCalendarId) || 'default');
+      applyScopeUi();
+    }
+    buildSwatches();
+    $('summary').focus();
+  });
+})();
+</script>
+</body>
+</html>

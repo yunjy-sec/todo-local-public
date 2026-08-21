@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { display: flex; flex-direction: column; font-size: 12px; }
+  .input-area { padding: 8px 10px 6px; border-bottom: 1px solid #e4e6ea; flex: none; }
+  #txt { width: 100%; font-size: 13px; padding: 6px 8px; }
+  #preview { margin: 3px 2px 4px; font-size: 11px; color: #60646e; min-height: 14px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #preview.warn { color: #ca600c; }
+  #preview.err { color: #c82a2a; }
+  #preview.ok { color: #168054; }
+  .chips { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; margin-bottom: 5px; }
+  .chips button { padding: 2px 9px; border-radius: 11px; font-size: 11px; white-space: nowrap; flex: none; }
+  .chips button.on { background: #dbe8fe; border-color: #a8c7fa; }
+  .classic { display: flex; align-items: center; gap: 3px; flex-wrap: nowrap; margin-bottom: 4px; }
+  .classic input[type=date] { width: 104px; padding: 3px 4px; font-size: 11.5px; }
+  .classic input[type=time] { width: 64px; padding: 3px 4px; font-size: 11.5px; }
+  .classic .tilde { color: #969aa2; flex: none; }
+  .classic .ad { display: flex; align-items: center; gap: 3px; font-size: 11.5px; white-space: nowrap; flex: none; margin-left: 2px; }
+  .row2 { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; }
+  #qLoc { flex: 1; min-width: 60px; padding: 3px 6px; font-size: 11.5px; }
+  #renotify { width: 46px; padding: 3px 4px; font-size: 11.5px; }
+  .row2 .lbl { color: #5f6470; font-size: 11.5px; white-space: nowrap; }
+  .btngroup { display: flex; gap: 0; flex: none; }
+  .btngroup button { padding: 4px 11px; font-size: 12px; border-radius: 0; }
+  .btngroup button:first-child { border-radius: 5px 0 0 5px; }
+  .btngroup button:last-child { border-radius: 0 5px 5px 0; border-left: none; }
+  .list { flex: 1; overflow-y: auto; padding: 2px 0; }
+  .sect { padding: 5px 10px 1px; font-size: 10.5px; color: #969aa2; }
+  .item { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: default; }
+  .item:hover { background: #f6f7f9; }
+  .item .dot { flex: none; width: 8px; height: 8px; border-radius: 4px; }
+  .item .mid { flex: 1; min-width: 0; }
+  .item .t { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item.closed .t { text-decoration: line-through; color: #969aa2; }
+  .item .sub { font-size: 10.5px; color: #8a8e97; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { flex: none; font-size: 10.5px; padding: 1px 7px; border-radius: 9px; white-space: nowrap; }
+  .st-wait { background: #e8f0fe; color: #1a56a8; }
+  .st-alarm { background: #fde8d7; color: #b45309; }
+  .st-snooze { background: #fef3cd; color: #7a5b0a; }
+  .st-done { background: #e6f4ec; color: #14713f; }
+  .st-cancel { background: #eceef1; color: #60646e; }
+  .footer { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-top: 1px solid #e4e6ea; flex: none; flex-wrap: nowrap; }
+  .footer label { font-size: 11.5px; white-space: nowrap; flex: none; }
+  .footer .stats { flex: 1; min-width: 0; font-size: 11px; color: #8a8e97; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .footer .btngroup button { padding: 3px 10px; font-size: 11.5px; }
+  .ctx { position: fixed; background: #fff; border: 1px solid #cbced5; border-radius: 6px;
+         box-shadow: 0 4px 14px rgba(0,0,0,.15); display: none; z-index: 30; min-width: 116px; }
+  .ctx div { padding: 5px 12px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+  .ctx div:hover { background: #f4f5f7; }
+  .ctx .sep { height: 1px; background: #e4e6ea; padding: 0; margin: 3px 0; }
+  .overlay { position: fixed; inset: 0; background: rgba(32,33,36,.35); display: none; z-index: 40; }
+  .panel { position: absolute; top: 0; right: 0; bottom: 0; width: 320px; background: #fff;
+           box-shadow: -4px 0 18px rgba(0,0,0,.18); padding: 12px; overflow-y: auto; }
+  .panel h2 { font-size: 14px; margin-bottom: 10px; }
+  .panel .f { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; flex-wrap: nowrap; }
+  .panel .f label { flex: 0 0 92px; font-size: 11.5px; white-space: nowrap; }
+  .panel .f input[type=number] { width: 58px; padding: 3px 4px; }
+  .panel .f input[type=text] { flex: 1; min-width: 0; padding: 3px 6px; }
+  .panel .f input[type=range] { flex: 1; min-width: 0; }
+  .panel .f select { padding: 3px 4px; max-width: 176px; }
+  .panel .f .u { font-size: 11px; color: #8a8e97; white-space: nowrap; }
+  .panel .actions { display: flex; gap: 6px; margin-top: 12px; }
+  .panel .actions .grow { flex: 1; }
+</style>
+</head>
+<body>
+  <div class="input-area">
+    <input id="txt" type="text" placeholder='예: "내일 오후 3시 회의", "30분 뒤 스트레칭" — 또는 아래에 직접 입력'>
+    <div id="preview">시간 표현을 자동 인식합니다</div>
+    <div class="chips" id="chips"></div>
+    <div class="classic">
+      <input id="qsDate" type="date"><input id="qsTime" type="time" step="60">
+      <span class="tilde">~</span>
+      <input id="qeDate" type="date"><input id="qeTime" type="time" step="60">
+      <label class="ad"><input id="qAllDay" type="checkbox">종일</label>
+    </div>
+    <div class="row2">
+      <input id="qLoc" type="text" placeholder="장소 (선택)">
+      <span class="lbl">재알림</span>
+      <input id="renotify" type="number" min="1" max="720" value="5">
+      <span class="lbl">분</span>
+      <span class="btngroup">
+        <button id="btnDetail" title="반복·미리 알림·색상 등 상세 설정">상세…</button>
+        <button class="primary" id="btnAdd">추가</button>
+      </span>
+    </div>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="footer">
+    <label><input type="checkbox" id="chkClosed"> 지난 항목</label>
+    <button id="btnSort" title="시간 정렬 방향 전환" style="padding:2px 8px;font-size:11px;flex:none;">↑ 과거순</button>
+    <span class="stats" id="stats"></span>
+    <span class="btngroup">
+      <button id="btnCal">캘린더</button>
+      <button id="btnSettings">설정</button>
+    </span>
+  </div>
+
+  <div class="ctx" id="ctx"></div>
+
+  <div class="overlay" id="settingsOverlay">
+    <div class="panel">
+      <h2>설정</h2>
+      <div class="f"><label>팝업 위치</label>
+        <select id="sPos">
+          <option value="bottom-center">중앙 하단</option>
+          <option value="bottom-left">좌측 하단</option>
+          <option value="bottom-right">우측 하단</option>
+          <option value="center">화면 중앙</option>
+          <option value="top-center">중앙 상단</option>
+        </select>
+      </div>
+      <div class="f"><label>팝업 불투명도</label><input id="sOpacity" type="range" min="30" max="100"><span id="sOpacityVal" class="u"></span></div>
+      <div class="f"><label>팝업 크기</label><input id="sW" type="number" min="260" max="900"><span class="u">×</span><input id="sH" type="number" min="130" max="500"></div>
+      <div class="f"><label>기본 재알림</label><input id="sRenotify" type="number" min="1" max="720"><span class="u">분마다</span></div>
+      <div class="f"><label>기본 미루기</label><input id="sSnooze" type="number" min="1" max="720"><span class="u">분</span></div>
+      <div class="f"><label>기본 미리 알림</label><input id="sReminders" type="text" placeholder="예: 10, 30 (분)"></div>
+      <div class="f"><label>기본 캘린더</label><select id="sDefCal"></select></div>
+      <div class="f"><label>알림음</label><input id="sSound" type="checkbox"></div>
+      <div class="f"><label>자동 실행</label><input id="sAutostart" type="checkbox"><span class="u">윈도우 시작 시</span></div>
+      <div class="f"><label>시간 표기</label>
+        <select id="sTimeFormat">
+          <option value="24h">24시간 (00:00 - 23:59)</option>
+          <option value="12h">오전/오후 (오후 2:30)</option>
+        </select>
+      </div>
+      <div class="f"><label>시각 앞자리 0</label><input id="sTimePad" type="checkbox"><span class="u">끄면 9:00 처럼</span></div>
+      <div class="f"><label>캘린더 불투명도</label><input id="sCalOpacity" type="range" min="30" max="100"><span id="sCalOpacityVal" class="u"></span></div>
+      <div class="f"><label>포커스 시 불투명</label><input id="sCalFocus" type="checkbox"></div>
+      <div class="f"><label>드래그 스냅</label><input id="sSnap" type="number" min="1" max="60"><span class="u">분 단위</span></div>
+      <div class="f"><label>단축키: 목록</label><input id="sHkList" type="text" placeholder="Control+Alt+T"></div>
+      <div class="f"><label>단축키: 새 일정</label><input id="sHkNew" type="text" placeholder="Control+Alt+N"></div>
+      <div class="f"><label>단축키: 캘린더</label><input id="sHkCal" type="text" placeholder="Control+Alt+C"></div>
+      <div class="actions">
+        <button id="sPreview">팝업 미리보기</button>
+        <span class="grow"></span>
+        <span class="btngroup">
+          <button id="sClose">닫기</button>
+          <button class="primary" id="sSave">저장</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+<script src="../shared/nlp.js"></script>
+<script src="../shared/format.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let settings = null;
+  let activeChip = null;
+
+  const p2 = n => String(n).padStart(2, '0');
+  // 시각 표기는 shared/format.js 한 곳에서 나온다 — 창마다 따로 그리면 설정이 안 먹는다.
+  const fmtKorean = d => TD_FORMAT.dateTime(d, settings);
+  const fmtList = (d, now) => TD_FORMAT.listDate(d, now, settings);
+  const fmtTime = d => TD_FORMAT.time(d, settings);
+  function toLocalIso(d) {
+    const off = -d.getTimezoneOffset();
+    const sg = off >= 0 ? '+' : '-';
+    const a = Math.abs(off);
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}${sg}${p2(Math.floor(a / 60))}:${p2(a % 60)}`;
+  }
+
+  // ---- 클래식 입력 (칩은 이 필드를 채우는 단축키) ----
+  function setClassic(d) {
+    $('qsDate').value = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+    $('qsTime').value = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+    $('qeDate').value = '';
+    $('qeTime').value = '';
+  }
+  function clearClassic() {
+    for (const id of ['qsDate', 'qsTime', 'qeDate', 'qeTime']) $(id).value = '';
+    $('qAllDay').checked = false;
+    clearChip();
+  }
+  function classicStart() {
+    if (!$('qsDate').value) return null;
+    const [y, m, d] = $('qsDate').value.split('-').map(Number);
+    if ($('qAllDay').checked) return new Date(y, m - 1, d);
+    const [hh, mm] = ($('qsTime').value || '09:00').split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm, 0);
+  }
+  function classicEnd(start) {
+    if (!$('qeDate').value && !$('qeTime').value) return null;
+    const dv = $('qeDate').value || $('qsDate').value;
+    const [y, m, d] = dv.split('-').map(Number);
+    if ($('qAllDay').checked) return new Date(y, m - 1, d);
+    const [hh, mm] = ($('qeTime').value || $('qsTime').value || '09:30').split(':').map(Number);
+    const e = new Date(y, m - 1, d, hh, mm, 0);
+    return e > start ? e : null;
+  }
+
+  // 칩은 registry.QUICK_CHIPS 에서 나온다. 여기 손으로 적으면 등록표를 고쳐도
+  // 화면이 안 바뀌고, 둘이 갈라진 것을 아무도 모른다.
+  function chipTime(chip) {
+    if (typeof chip.offsetMinutes === 'number') {
+      return new Date(Date.now() + chip.offsetMinutes * 60000);
+    }
+    const d = new Date(Date.now() + (chip.dayOffset || 0) * 86400000);
+    d.setHours(chip.atHour || 0, chip.atMinute || 0, 0, 0);
+    return d;
+  }
+  for (const chip of window.api.registry.QUICK_CHIPS) {
+    const label = chip.label;
+    const fn = () => chipTime(chip);
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = () => {
+      clearChip();
+      activeChip = b;
+      b.classList.add('on');
+      $('qAllDay').checked = false;
+      setClassic(fn());
+      updatePreview();
+    };
+    $('chips').appendChild(b);
+  }
+  function clearChip() {
+    if (activeChip) activeChip.classList.remove('on');
+    activeChip = null;
+  }
+  for (const id of ['qsDate', 'qsTime', 'qeDate', 'qeTime']) {
+    $(id).addEventListener('input', () => { clearChip(); updatePreview(); });
+  }
+  $('qAllDay').onchange = () => {
+    const off = $('qAllDay').checked;
+    $('qsTime').style.display = off ? 'none' : '';
+    $('qeTime').style.display = off ? 'none' : '';
+    clearChip();
+    updatePreview();
+  };
+
+  // 우선순위: 자연어 > 클래식 입력
+  function resolveInput() {
+    const raw = $('txt').value.trim();
+    let nr;
+    try { nr = Nlp.parse(raw, new Date()); }
+    catch (e) { nr = { hasTime: false, title: raw }; }
+    if (nr.hasTime) {
+      return { when: nr.when, end: null, allDay: false, title: nr.title, source: '문장 인식: ' + nr.matched };
+    }
+    const cs = classicStart();
+    if (cs) {
+      return { when: cs, end: classicEnd(cs), allDay: $('qAllDay').checked, title: raw, source: '직접 입력' };
+    }
+    return { when: null, end: null, allDay: false, title: raw, source: null };
+  }
+
+  function updatePreview() {
+    const p = $('preview');
+    const raw = $('txt').value.trim();
+    p.className = '';
+    const r = resolveInput();
+    if (!raw && !r.when) { p.textContent = '시간 표현을 자동 인식합니다 — 또는 아래 날짜·시각을 직접 입력'; return; }
+    if (!r.when) { p.textContent = '시간 없음 — 문장에 시간을 쓰거나 날짜를 선택하세요'; return; }
+    if (!r.title) { p.className = 'warn'; p.textContent = '할 일 내용을 입력하세요'; return; }
+    const past = !r.allDay && r.when <= new Date();
+    p.className = past ? 'warn' : '';
+    const range = r.allDay ? TD_FORMAT.allDay(r.when)
+      : fmtKorean(r.when) + (r.end ? ' ~ ' + fmtTime(r.end) : '');
+    p.textContent = `알림 ${range} (${r.source}) · ${r.title}` + (past ? ' — 지난 시간, 즉시 알림' : '');
+  }
+
+  async function addFromInput() {
+    const r = resolveInput();
+    const p = $('preview');
+    if (!r.when) { p.className = 'err'; p.textContent = '시간이 필요합니다 — 문장에 시간을 쓰거나 날짜를 선택하세요'; return; }
+    if (!r.title) { p.className = 'err'; p.textContent = '할 일 내용을 입력하세요'; return; }
+    // 종일: 화면의 종료일은 포함(마지막 날) → 저장은 exclusive
+    const endIso = r.end
+      ? toLocalIso(r.allDay ? new Date(r.end.getTime() + 86400000) : r.end)
+      : null;
+    await window.api.invoke('add-event', {
+      summary: r.title,
+      start: toLocalIso(r.when),
+      end: endIso,
+      allDay: r.allDay,
+      location: $('qLoc').value.trim(),
+      renotifyMinutes: parseInt($('renotify').value, 10) || 5,
+    });
+    $('txt').value = '';
+    $('qLoc').value = '';
+    clearClassic();
+    p.className = 'ok';
+    p.textContent = `추가됨: ${fmtKorean(r.when)} — ${r.title}`;
+    $('txt').focus();
+  }
+
+  function openDetailFromInput() {
+    const r = resolveInput();
+    const start = r.when || (() => { const d = new Date(Date.now() + 3600000); d.setMinutes(0, 0, 0); return d; })();
+    window.api.invoke('open-detail', {
+      mode: 'new',
+      summary: r.title || '',
+      start: toLocalIso(start),
+      end: r.end ? toLocalIso(r.end) : null,
+      allDay: r.allDay,
+    });
+  }
+
+  $('btnAdd').onclick = addFromInput;
+  $('btnDetail').onclick = openDetailFromInput;
+  $('txt').addEventListener('input', updatePreview);
+  $('txt').addEventListener('keydown', e => { if (e.key === 'Enter') addFromInput(); });
+  $('btnCal').onclick = () => window.api.invoke('open-calendar');
+
+  // ---- 목록 ----
+  async function refresh() {
+    const now = new Date();
+    const res = await window.api.invoke('list-instances', {
+      start: new Date(now.getTime() - 30 * 86400000).toISOString(),
+      end: new Date(now.getTime() + 365 * 86400000).toISOString(),
+    });
+    const items = res.items;
+    const list = $('list');
+    list.innerHTML = '';
+    const horizon = now.getTime() + 14 * 86400000;
+    const visible = items.filter(i => !i.recurring || new Date(i.start).getTime() <= horizon);
+    // 예정: 기본 과거→미래 오름차순, 토글로 반전. 지난 항목: 항상 최근 처리 순.
+    const asc = !settings || settings.listSortAsc !== false;
+    const pending = visible.filter(i => i.status === 'pending');
+    if (!asc) pending.reverse();
+    const closed = visible.filter(i => i.status !== 'pending').reverse();
+
+    const addSection = (label) => {
+      const s = document.createElement('div');
+      s.className = 'sect';
+      s.textContent = label;
+      list.appendChild(s);
+    };
+
+    addSection('예정 (' + pending.length + ')');
+    for (const it of pending) list.appendChild(renderItem(it, now));
+    if ($('chkClosed').checked && closed.length) {
+      addSection('지난 항목 (' + closed.length + ')');
+      for (const it of closed) list.appendChild(renderItem(it, now));
+    }
+    const done = closed.filter(i => i.status === 'done').length;
+    $('stats').textContent = `대기 ${pending.length} · 완료 ${done} · 취소 ${closed.length - done}`
+      + (res.truncated ? ` · ${res.total}건 중 ${res.cap}건만 표시` : '');
+  }
+
+  function renderItem(it, now) {
+    const el = document.createElement('div');
+    el.className = 'item' + (it.status !== 'pending' ? ' closed' : '');
+    const start = new Date(it.start);
+
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.style.background = it.color;
+    dot.title = it.calName || '';
+    el.appendChild(dot);
+
+    const mid = document.createElement('div');
+    mid.className = 'mid';
+    const t = document.createElement('div');
+    t.className = 't';
+    t.textContent = it.title;
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    const parts = [it.allDay ? TD_FORMAT.allDay(start) : fmtList(start, now)];
+    if (it.recurring && it.recurDesc) parts.push('↻ ' + it.recurDesc);
+    else if (it.recurring) parts.push('↻ 반복');
+    if (it.reminderMinutes && it.reminderMinutes.length) parts.push('미리 ' + it.reminderMinutes.join('·') + '분');
+    if (it.location) parts.push('장소 ' + it.location);
+    parts.push(it.renotifyMinutes + '분마다');
+    sub.textContent = parts.join(' · ');
+    mid.appendChild(t); mid.appendChild(sub);
+    el.appendChild(mid);
+
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    if (it.status === 'done') { chip.classList.add('st-done'); chip.textContent = '완료'; }
+    else if (it.status === 'cancelled') { chip.classList.add('st-cancel'); chip.textContent = '취소'; }
+    else if (start > now) { chip.classList.add('st-wait'); chip.textContent = '대기'; }
+    else {
+      const sn = it.snoozeUntil ? new Date(it.snoozeUntil) : null;
+      if (sn && sn > now) {
+        chip.classList.add('st-snooze');
+        chip.textContent = '미룸 ' + fmtTime(sn);
+      } else { chip.classList.add('st-alarm'); chip.textContent = '알림중'; }
+    }
+    el.appendChild(chip);
+
+    if (!it.readOnly) {
+      el.ondblclick = () => window.api.invoke('open-detail', { mode: 'edit', masterId: it.masterId, key: it.key });
+    }
+    el.oncontextmenu = (e) => { e.preventDefault(); showCtx(e, it); };
+    return el;
+  }
+
+  // ---- 컨텍스트 메뉴 ----
+  const ctx = $('ctx');
+  function showCtx(e, it) {
+    ctx.innerHTML = '';
+    const mk = (label, fn) => {
+      const d = document.createElement('div');
+      d.textContent = label;
+      d.onclick = () => { ctx.style.display = 'none'; fn(); };
+      ctx.appendChild(d);
+    };
+    if (it.readOnly) {
+      // 원본(남의 캘린더)은 못 고친다. 대신 "내가 처리했다"는 표시는 내 화면에 남는다.
+      const note = document.createElement('div');
+      note.textContent = '구독 · 원본은 못 고칩니다';
+      note.style.color = '#8a8e97';
+      note.style.cursor = 'default';
+      ctx.appendChild(note);
+      if (it.status === 'pending') {
+        mk('내 화면에서 완료', () => window.api.invoke('set-status', { instId: it.instId, status: 'done' }));
+      } else {
+        mk('완료 취소', () => window.api.invoke('set-status', { instId: it.instId, status: 'pending' }));
+      }
+      ctx.style.left = Math.min(e.clientX, window.innerWidth - 150) + 'px';
+      ctx.style.top = Math.min(e.clientY, window.innerHeight - 90) + 'px';
+      ctx.style.display = 'block';
+      return;
+    }
+    if (it.status === 'pending') {
+      mk('지금 알림', () => window.api.invoke('notify-now', { masterId: it.masterId, key: it.key }));
+      mk('완료로 표시', () => window.api.invoke('set-status', { masterId: it.masterId, key: it.key, status: 'done' }));
+      mk('취소로 표시', () => window.api.invoke('set-status', { masterId: it.masterId, key: it.key, status: 'cancelled' }));
+    } else {
+      mk('대기로 되돌리기', () => window.api.invoke('set-status', { masterId: it.masterId, key: it.key, status: 'pending' }));
+    }
+    mk('수정…', () => window.api.invoke('open-detail', { mode: 'edit', masterId: it.masterId, key: it.key }));
+    mk('복제', () => window.api.invoke('duplicate-event', { masterId: it.masterId, key: it.key }));
+    const sep = document.createElement('div'); sep.className = 'sep'; ctx.appendChild(sep);
+    mk('삭제', async () => {
+      if (it.recurring) {
+        const r = await window.api.invoke('confirm', { message: `반복 일정 "${it.title}" 삭제`, buttons: ['이 일정만', '모든 일정', '취소'] });
+        if (r === 0) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'single' });
+        else if (r === 1) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'all' });
+      } else {
+        const r = await window.api.invoke('confirm', { message: `"${it.title}" 항목을 삭제할까요?`, buttons: ['삭제', '취소'] });
+        if (r === 0) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'all' });
+      }
+    });
+    ctx.style.left = Math.min(e.clientX, window.innerWidth - 136) + 'px';
+    ctx.style.top = Math.min(e.clientY, window.innerHeight - ctx.offsetHeight - 10) + 'px';
+    ctx.style.display = 'block';
+  }
+  document.addEventListener('click', () => { ctx.style.display = 'none'; });
+
+  // ---- 설정 패널 ----
+  async function openSettings() {
+    const s = settings;
+    const reg = await window.api.invoke('get-calendars');
+    const sel = $('sDefCal');
+    sel.innerHTML = '';
+    for (const svc of (reg && reg.services) || []) {
+      for (const acc of svc.accounts || []) {
+        for (const cal of acc.calendars || []) {
+          if (cal.accessRole && cal.accessRole !== 'owner' && cal.accessRole !== 'writer') continue;
+          const o = document.createElement('option');
+          o.value = cal.id;
+          o.textContent = acc.label + ' · ' + cal.summary;
+          sel.appendChild(o);
+        }
+      }
+    }
+    sel.value = s.defaultCalendarId || 'default';
+    $('sPos').value = s.position;
+    $('sOpacity').value = Math.round(s.opacity * 100);
+    $('sOpacityVal').textContent = Math.round(s.opacity * 100) + '%';
+    $('sW').value = s.popupWidth; $('sH').value = s.popupHeight;
+    $('sRenotify').value = s.defaultRenotifyMinutes;
+    $('sSnooze').value = s.defaultSnoozeMinutes;
+    $('sReminders').value = (s.defaultReminderMinutes || []).join(', ');
+    $('sSound').checked = s.playSound;
+    $('sAutostart').checked = s.autostart;
+    $('sCalOpacity').value = Math.round(s.calendarOpacity * 100);
+    $('sCalOpacityVal').textContent = Math.round(s.calendarOpacity * 100) + '%';
+    $('sCalFocus').checked = s.calendarOpaqueOnFocus;
+    $('sSnap').value = s.snapMinutes;
+    $('sHkList').value = s.hotkeyList;
+    $('sHkNew').value = s.hotkeyNew;
+    $('sHkCal').value = s.hotkeyCalendar;
+    $('sTimeFormat').value = s.timeFormat;
+    $('sTimePad').checked = s.timePadHour;
+    $('settingsOverlay').style.display = 'block';
+  }
+
+  function collectSettings() {
+    return {
+      position: $('sPos').value,
+      opacity: parseInt($('sOpacity').value, 10) / 100,
+      popupWidth: parseInt($('sW').value, 10),
+      popupHeight: parseInt($('sH').value, 10),
+      defaultRenotifyMinutes: parseInt($('sRenotify').value, 10),
+      defaultSnoozeMinutes: parseInt($('sSnooze').value, 10),
+      defaultReminderMinutes: $('sReminders').value.split(',').map(x => parseInt(x.trim(), 10)).filter(x => x > 0),
+      playSound: $('sSound').checked,
+      autostart: $('sAutostart').checked,
+      calendarOpacity: parseInt($('sCalOpacity').value, 10) / 100,
+      calendarOpaqueOnFocus: $('sCalFocus').checked,
+      snapMinutes: parseInt($('sSnap').value, 10),
+      hotkeyList: $('sHkList').value.trim(),
+      hotkeyNew: $('sHkNew').value.trim(),
+      hotkeyCalendar: $('sHkCal').value.trim(),
+      showClosed: $('chkClosed').checked,
+      defaultCalendarId: $('sDefCal').value || 'default',
+      timeFormat: $('sTimeFormat').value,
+      timePadHour: $('sTimePad').checked,
+    };
+  }
+
+  // 슬라이더 값은 불투명도다. 투명도를 함께 적어 방향을 헷갈리지 않게 한다.
+  const opacityText = v => `${v}% (투명도 ${100 - v}%)`;
+  $('sOpacity').oninput = () => { $('sOpacityVal').textContent = opacityText($('sOpacity').value); };
+  $('sCalOpacity').oninput = () => { $('sCalOpacityVal').textContent = opacityText($('sCalOpacity').value); };
+  $('btnSettings').onclick = openSettings;
+  $('sClose').onclick = () => { $('settingsOverlay').style.display = 'none'; };
+  $('sSave').onclick = async () => {
+    settings = await window.api.invoke('save-settings', collectSettings());
+    $('renotify').value = settings.defaultRenotifyMinutes;
+    $('settingsOverlay').style.display = 'none';
+  };
+  $('sPreview').onclick = () => window.api.invoke('preview-popup', collectSettings());
+  $('settingsOverlay').addEventListener('click', (e) => {
+    if (e.target === $('settingsOverlay')) $('settingsOverlay').style.display = 'none';
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') $('settingsOverlay').style.display = 'none';
+  });
+
+  function updateSortBtn() {
+    const asc = !settings || settings.listSortAsc !== false;
+    $('btnSort').textContent = asc ? '↑ 과거순' : '↓ 미래순';
+  }
+  $('btnSort').onclick = async () => {
+    settings.listSortAsc = settings.listSortAsc === false;
+    await window.api.invoke('save-settings', { listSortAsc: settings.listSortAsc });
+    updateSortBtn();
+    refresh();
+  };
+
+  $('chkClosed').onchange = async () => {
+    settings.showClosed = $('chkClosed').checked;
+    await window.api.invoke('save-settings', { showClosed: settings.showClosed });
+    refresh();
+  };
+
+  // ---- 초기화 ----
+  window.api.on('data-changed', refresh);
+  window.api.on('focus-input', () => { $('txt').focus(); $('txt').select(); });
+  window.api.on('open-settings', openSettings);
+
+  (async () => {
+    const init = await window.api.invoke('get-init');
+    settings = init.settings;
+    $('renotify').value = settings.defaultRenotifyMinutes;
+    $('chkClosed').checked = settings.showClosed;
+    updateSortBtn();
+    refresh();
+  })();
+})();
+</script>
+</body>
+</html>

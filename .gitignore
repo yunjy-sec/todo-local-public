@@ -1,0 +1,19 @@
+# 빌드 산출물
+*.exe
+*.pdb
+
+# Node
+app/node_modules/
+npm-debug.log*
+
+# 런타임 데이터/백업 (앱 데이터는 %APPDATA%\TodoPopup 에 있지만 혹시 모를 로컬 산출물)
+*.corrupt-*
+*.tmp
+
+# 원격 저장 서버의 사용자 상태 — 일정 전문이 들어 있다. 절대 커밋하지 않는다.
+data/
+
+
+# OS
+Thumbs.db
+Desktop.ini

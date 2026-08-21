@@ -1,0 +1,44 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'Malgun Gothic', '맑은 고딕', 'Segoe UI', sans-serif;
+  font-size: 12.5px;
+  color: #202124;
+  background: #fff;
+}
+button {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 4px 10px;
+  border: 1px solid #cbced5;
+  border-radius: 5px;
+  background: #fff;
+  color: #37404a;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover { background: #f4f5f7; }
+button:active { transform: scale(0.98); }
+button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+button.primary:hover { background: #1765cc; }
+button.danger-text { color: #c82a2a; }
+input[type="text"], input[type="number"], input[type="date"], input[type="time"], select, textarea {
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 4px 7px;
+  border: 1px solid #cbced5;
+  border-radius: 5px;
+  background: #fff;
+  color: #202124;
+}
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid #a8c7fa;
+  outline-offset: 0;
+  border-color: #1a73e8;
+}
+label { color: #5f6470; }
+.muted { color: #60646e; }
+.small { font-size: 12px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d4d6db; border-radius: 5px; }
+::-webkit-scrollbar-track { background: transparent; }

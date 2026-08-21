@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { display: flex; }
+  #side { flex: 0 0 192px; border-right: 1px solid #e4e6ea; padding: 8px 8px; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 2px; }
+  #calWrap { flex: 1; padding: 8px 10px; min-width: 0; }
+  #cal { height: calc(100vh - 16px); }
+  .svc-hd { font-size: 11px; color: #969aa2; padding: 6px 4px 2px; }
+  .acc { margin-bottom: 6px; }
+  .acc-hd { display: flex; align-items: center; font-size: 12px; font-weight: 700; color: #37404a;
+            padding: 4px; border-radius: 5px; }
+  .acc-hd .sp { flex: 1; }
+  .acc-hd button { border: none; background: none; padding: 2px 5px; font-size: 13px; color: #969aa2; }
+  .acc-hd button:hover { color: #37404a; background: #eef0f3; border-radius: 4px; }
+  .cal-row { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 5px; font-size: 12.5px; }
+  .cal-row:hover { background: #f4f5f7; }
+  .cal-row .dot { width: 14px; height: 14px; border-radius: 4px; cursor: pointer; flex: none; border: 1px solid rgba(0,0,0,.15); }
+  .cal-row .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+  .cal-row .nm.off { color: #b3b6bd; }
+  .cal-row .ic { border: none; background: none; padding: 0 3px; cursor: pointer; font-size: 12px;
+                 visibility: hidden; color: #969aa2; }
+  .cal-row:hover .ic { visibility: visible; }
+  .cal-row .ic.bell-off { visibility: visible; color: #c8830a; }
+  .inline-add { display: flex; gap: 4px; padding: 4px 4px 4px 10px; }
+  .inline-add input { flex: 1; min-width: 0; font-size: 12px; padding: 4px 6px; }
+  .side-foot { margin-top: auto; padding-top: 8px; border-top: 1px solid #eceef1; display: flex; flex-direction: column; gap: 6px; }
+  .side-foot button { font-size: 12px; padding: 5px 8px; text-align: left; }
+  .side-foot .hint { font-size: 11px; color: #b3b6bd; padding: 0 2px; }
+  .palette { position: fixed; z-index: 60; background: #fff; border: 1px solid #cbced5; border-radius: 8px;
+             box-shadow: 0 6px 22px rgba(0,0,0,.2); padding: 10px; display: none; width: 178px; }
+  .palette .colors { display: flex; flex-wrap: wrap; gap: 6px; }
+  .palette .c { width: 20px; height: 20px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; }
+  .palette .c.on { border-color: #202124; }
+  .palette .c.wheel { background: conic-gradient(#f43f5e, #f59e0b, #84cc16, #06b6d4, #3b82f6, #a855f7, #f43f5e); }
+  .cal-row .ic svg { display: block; }
+  .addmenu { position: fixed; z-index: 60; background: #fff; border: 1px solid #cbced5; border-radius: 8px;
+             box-shadow: 0 6px 22px rgba(0,0,0,.2); display: none; width: 236px; padding: 4px; }
+  .addmenu .item { padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+  .addmenu .item:hover { background: #f4f5f7; }
+  .addmenu .item.soon { cursor: default; opacity: .55; }
+  .addmenu .item.soon:hover { background: transparent; }
+  .addmenu .item .t { font-size: 12.5px; }
+  .addmenu .item .d { font-size: 11px; color: #8a8e97; }
+  .subform { border: 1px solid #cbced5; border-radius: 6px; padding: 6px; margin: 4px 0;
+             display: flex; flex-direction: column; gap: 4px; }
+  .subform input { font-size: 11.5px; padding: 3px 5px; }
+  .subform .row { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #5f6470; }
+  .subform .row .sp { flex: 1; }
+  .subform .row input { width: 46px; }
+  .subform button { font-size: 11px; padding: 2px 8px; }
+  .subform .msg { font-size: 11px; color: #ca600c; min-height: 13px; }
+  .subform .hint2 { font-size: 10.5px; color: #8a8e97; }
+  .cal-row .ro { font-size: 10px; color: #b3b6bd; flex: none; }
+  .fc { font-size: 12px; }
+  .fc .fc-toolbar-title { font-size: 15px; }
+  .fc .fc-toolbar.fc-header-toolbar { margin-bottom: 6px; }
+  .fc .fc-button {
+    background: #fff; border: 1px solid #cbced5; color: #37404a;
+    font-size: 11.5px; padding: 3px 8px; box-shadow: none !important; white-space: nowrap;
+  }
+  .fc .fc-button:hover { background: #f4f5f7; }
+  .fc .fc-button-active, .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: #dbe8fe !important; border-color: #a8c7fa !important; color: #1a56a8 !important;
+  }
+  .fc .fc-addBtn-button { background: #1a73e8 !important; border-color: #1a73e8 !important; color: #fff !important; }
+  .fc-event { cursor: pointer; font-size: 12px; }
+  .fc-event.closed { opacity: .55; }
+  .fc-event.closed .fc-event-title { text-decoration: line-through; }
+  .card {
+    position: fixed; z-index: 50; background: #fff; border: 1px solid #cbced5; border-radius: 8px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.2); width: 280px; display: none;
+  }
+  .card .hd { padding: 10px 14px 4px; }
+  .card .hd .t { font-size: 14px; font-weight: 700; }
+  .card .hd .s { font-size: 12px; color: #60646e; margin-top: 3px; }
+  .card .acts { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; }
+  .card .acts button { font-size: 12px; padding: 5px 10px; }
+  .hint { position: fixed; left: 12px; bottom: 8px; font-size: 11px; color: #969aa2; z-index: 5;
+          background: rgba(255,255,255,.8); padding: 2px 8px; border-radius: 8px; }
+</style>
+</head>
+<body>
+  <div id="side"></div>
+  <div id="calWrap"><div id="cal"></div></div>
+  <div class="palette" id="palette">
+    <div class="colors" id="paletteColors"></div>
+    <input type="color" id="paletteCustom" style="position:absolute;width:0;height:0;opacity:0;border:0;padding:0">
+  </div>
+  <div class="addmenu" id="addMenu"></div>
+  <div class="hint">C 새 일정 · T 오늘 · 1~4 뷰 전환 · Ctrl+C/V 복사·붙여넣기 · 클릭한 칸이 붙여넣기 위치</div>
+  <div class="card" id="card">
+    <div class="hd"><div class="t" id="cardTitle"></div><div class="s" id="cardSub"></div></div>
+    <div class="acts" id="cardActs"></div>
+  </div>
+
+<script src="../node_modules/fullcalendar/index.global.min.js"></script>
+<script src="../node_modules/@fullcalendar/core/locales/ko.global.js"></script>
+<script src="../shared/format.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let settings = null;
+  let calendar = null;
+  let cursorDate = null;        // 마지막 클릭한 칸 (붙여넣기 대상)
+  let selected = null;          // 마지막 클릭한 이벤트 인스턴스
+  let clipboard = null;         // 복사된 폼 데이터
+  const instMap = new Map();    // instId -> 인스턴스 정보
+
+  function toLocalIso(d) {
+    const p = n => String(n).padStart(2, '0');
+    const off = -d.getTimezoneOffset();
+    const sg = off >= 0 ? '+' : '-';
+    const a = Math.abs(off);
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sg}${p(Math.floor(a / 60))}:${p(a % 60)}`;
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function snapStr(min) { return `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}:00`; }
+
+  async function askScope(msg) {
+    // 반환: 'single' | 'all' | null
+    const r = await window.api.invoke('confirm', { message: msg, buttons: ['이 일정만', '모든 일정', '취소'] });
+    return r === 0 ? 'single' : r === 1 ? 'all' : null;
+  }
+
+  async function moveOrResize(info) {
+    const it = instMap.get(info.event.id);
+    if (!it) { info.revert(); return; }
+    if (it.readOnly) {
+      // 구독(읽기 전용) 캘린더의 일정은 우리가 고칠 수 없다 — 고쳐도 다음 갱신에 덮인다.
+      info.revert();
+      return;
+    }
+    let scope = 'all';
+    if (it.recurring) {
+      scope = await askScope(`반복 일정 "${it.title}" 이동`);
+      if (!scope) { info.revert(); return; }
+    }
+    const start = info.event.start;
+    const end = info.event.end || new Date(start.getTime() + 30 * 60000);
+    await window.api.invoke('move-event', {
+      masterId: it.masterId, key: it.key, scope,
+      start: toLocalIso(start), end: toLocalIso(end),
+    });
+  }
+
+  function fmtRange(it) {
+    const s = new Date(it.start), e = new Date(it.end);
+    const d = `${s.getMonth() + 1}월 ${s.getDate()}일 (${TD_FORMAT.DAYS[s.getDay()]})`;
+    if (it.allDay) return d + ' 종일';
+    return `${d} ${TD_FORMAT.time(s, settings)} ~ ${TD_FORMAT.time(e, settings)}`;
+  }
+
+  function hideCard() { $('card').style.display = 'none'; }
+
+  function showCard(ev, jsEvent) {
+    const it = instMap.get(ev.id);
+    if (!it) return;
+    selected = it;
+    $('cardTitle').textContent = it.title;
+    const subs = [fmtRange(it)];
+    if (it.recurDesc) subs.push('↻ ' + it.recurDesc);
+    if (it.reminderMinutes && it.reminderMinutes.length) subs.push('미리 알림 ' + it.reminderMinutes.join('·') + '분 전');
+    if (it.status !== 'pending') subs.push(it.status === 'done' ? '완료됨' : '취소됨');
+    $('cardSub').textContent = subs.join(' · ');
+
+    const acts = $('cardActs');
+    acts.innerHTML = '';
+    const mk = (label, fn, cls) => {
+      const b = document.createElement('button');
+      b.textContent = label;
+      if (cls) b.className = cls;
+      b.onclick = (e2) => { e2.stopPropagation(); hideCard(); fn(); };
+      acts.appendChild(b);
+    };
+    if (it.readOnly) {
+      // 원본은 못 고치지만, 내가 처리했다는 표시는 내 화면에 남길 수 있다.
+      subs.push('구독 · 원본은 못 고칩니다');
+      $('cardSub').textContent = subs.join(' · ');
+      if (it.status === 'pending') {
+        mk('내 화면에서 완료', () => window.api.invoke('set-status',
+          { instId: it.instId, status: 'done' }), 'primary');
+      } else {
+        mk('완료 취소', () => window.api.invoke('set-status',
+          { instId: it.instId, status: 'pending' }));
+      }
+    } else if (it.status === 'pending') {
+      mk('완료', () => window.api.invoke('set-status', { masterId: it.masterId, key: it.key, status: 'done' }), 'primary');
+      mk('지금 알림', () => window.api.invoke('notify-now', { masterId: it.masterId, key: it.key }));
+    } else {
+      mk('대기로 되돌리기', () => window.api.invoke('set-status', { masterId: it.masterId, key: it.key, status: 'pending' }));
+    }
+    if (!it.readOnly) {
+      mk('수정', () => window.api.invoke('open-detail', { mode: 'edit', masterId: it.masterId, key: it.key }));
+      mk('복제', () => window.api.invoke('duplicate-event', { masterId: it.masterId, key: it.key }));
+      mk('삭제', () => deleteInst(it), 'danger-text');
+    }
+
+    const card = $('card');
+    card.style.display = 'block';
+    const x = Math.min(jsEvent.clientX, window.innerWidth - 300);
+    const y = Math.min(jsEvent.clientY, window.innerHeight - card.offsetHeight - 20);
+    card.style.left = Math.max(4, x) + 'px';
+    card.style.top = Math.max(4, y) + 'px';
+  }
+
+  async function deleteInst(it) {
+    if (it.recurring) {
+      const r = await window.api.invoke('confirm', { message: `반복 일정 "${it.title}" 삭제`, buttons: ['이 일정만', '모든 일정', '취소'] });
+      if (r === 0) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'single' });
+      else if (r === 1) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'all' });
+    } else {
+      const r = await window.api.invoke('confirm', { message: `"${it.title}" 항목을 삭제할까요?`, buttons: ['삭제', '취소'] });
+      if (r === 0) window.api.invoke('delete-event', { masterId: it.masterId, key: it.key, scope: 'all' });
+    }
+  }
+
+  async function copySelected() {
+    if (!selected) return;
+    const form = await window.api.invoke('get-event-form', { masterId: selected.masterId, key: selected.key });
+    if (form) clipboard = form;
+  }
+
+  function pasteAtCursor() {
+    if (!clipboard) return;
+    const base = cursorDate || new Date();
+    const s = new Date(clipboard.start), e = new Date(clipboard.end);
+    const dur = Math.max(60000, e - s);
+    const start = new Date(base);
+    if (cursorDate && cursorDate.getHours() === 0 && cursorDate.getMinutes() === 0 && !clipboard.allDay) {
+      // 월간 뷰의 날짜 칸에 붙여넣기: 원본 시각 유지
+      start.setHours(s.getHours(), s.getMinutes(), 0, 0);
+    }
+    window.api.invoke('add-event', {
+      summary: clipboard.summary,
+      start: toLocalIso(start),
+      end: toLocalIso(new Date(start.getTime() + dur)),
+      allDay: clipboard.allDay,
+      renotifyMinutes: clipboard.renotifyMinutes,
+      reminderMinutes: clipboard.reminderMinutes,
+      colorId: clipboard.colorId,
+      description: clipboard.description,
+      location: clipboard.location,
+      calendarId: clipboard.calendarId,
+    });
+  }
+
+  function initCalendar() {
+    calendar = new FullCalendar.Calendar($('cal'), {
+      locale: 'ko',
+      height: '100%',
+      initialView: 'timeGridWeek',
+      headerToolbar: {
+        left: 'prev,next today addBtn',
+        center: 'title',
+        right: 'timeGridDay,timeGridWeek,dayGridMonth,multiMonthYear listBtn',
+      },
+      customButtons: {
+        addBtn: { text: '+ 새 일정', click: () => {
+          const base = cursorDate || (() => { const d = new Date(Date.now() + 3600000); d.setMinutes(0, 0, 0); return d; })();
+          window.api.invoke('open-detail', { mode: 'new', start: toLocalIso(base) });
+        } },
+        listBtn: { text: '목록', click: () => window.api.invoke('open-list') },
+      },
+      buttonText: { today: '오늘', day: '일', week: '주', month: '월', year: '연' },
+      views: { multiMonthYear: { buttonText: '연' } },
+      nowIndicator: true,
+      navLinks: true,
+      // 시각 표기는 등록된 설정을 따른다(기본 24시간 00:00-23:59).
+      eventTimeFormat: TD_FORMAT.fcTime(settings),
+      slotLabelFormat: TD_FORMAT.fcTime(settings),
+      editable: true,
+      eventDurationEditable: true,
+      selectable: true,
+      selectMirror: true,
+      slotDuration: '00:30:00',
+      snapDuration: snapStr(settings.snapMinutes),
+      defaultTimedEventDuration: '00:30:00',
+      scrollTime: '08:00:00',
+      events: async (info, success, failure) => {
+        try {
+          const res = await window.api.invoke('list-instances', {
+            start: info.start.toISOString(), end: info.end.toISOString(),
+          });
+          const items = res.items;
+          if (res.truncated) {
+            // 조용히 자르면 뒤쪽 일정이 사라진 것처럼 보인다. 눈에 보이게 알린다.
+            const h = document.querySelector('.hint');
+            if (h) h.textContent = `이 기간 ${res.total}건 중 ${res.cap}건만 표시합니다 — 기간을 좁혀 보세요`;
+          }
+          instMap.clear();
+          success(items.map(it => {
+            instMap.set(it.instId, it);
+            return {
+              id: it.instId,
+              title: it.title,
+              start: it.start,
+              end: it.end,
+              allDay: it.allDay,
+              backgroundColor: it.color,
+              borderColor: it.color,
+              editable: !it.readOnly,
+              classNames: it.status !== 'pending' ? ['closed'] : [],
+            };
+          }));
+        } catch (e) { failure(e); }
+      },
+      eventDrop: moveOrResize,
+      eventResize: moveOrResize,
+      dateClick: (info) => { cursorDate = info.date; hideCard(); },
+      select: (info) => {
+        hideCard();
+        cursorDate = info.start;
+        window.api.invoke('open-detail', {
+          mode: 'new',
+          start: toLocalIso(info.start),
+          end: toLocalIso(info.end),
+          allDay: info.allDay && info.view.type !== 'timeGridWeek' && info.view.type !== 'timeGridDay',
+        });
+        calendar.unselect();
+      },
+      eventClick: (info) => {
+        info.jsEvent.preventDefault();
+        showCard(info.event, info.jsEvent);
+      },
+    });
+    calendar.render();
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!$('card').contains(e.target) && !e.target.closest('.fc-event')) hideCard();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) { copySelected(); return; }
+    if (e.ctrlKey && (e.key === 'v' || e.key === 'V')) { pasteAtCursor(); return; }
+    if (e.key === 'Delete' && selected) { deleteInst(selected); return; }
+    if (e.key === 'Escape') { hideCard(); return; }
+    if (e.key === 't' || e.key === 'T') calendar.today();
+    else if (e.key === 'c' || e.key === 'C') {
+      const base = cursorDate || new Date(Date.now() + 3600000);
+      window.api.invoke('open-detail', { mode: 'new', start: toLocalIso(base) });
+    }
+    else if (e.key === '1') calendar.changeView('timeGridDay');
+    else if (e.key === '2') calendar.changeView('timeGridWeek');
+    else if (e.key === '3') calendar.changeView('dayGridMonth');
+    else if (e.key === '4') calendar.changeView('multiMonthYear');
+  });
+
+  // ---- 사이드바: 계정/캘린더 트리 ----
+  let calendarsReg = null;
+  let paletteTarget = null; // 색상 변경 대상 calId
+  // 팔레트는 registry.CAL_PALETTE 에서 나온다(preload 가 노출한다).
+  // 여기 색을 복사해 두면 등록표에서 색을 바꿔도 사이드바만 옛날 색을 계속 칠한다.
+  const CAL_PALETTE = window.api.registry.CAL_PALETTE;
+
+  function buildPalette() {
+    const wrap = $('paletteColors');
+    wrap.innerHTML = '';
+    for (const hex of CAL_PALETTE) {
+      const d = document.createElement('div');
+      d.className = 'c';
+      d.style.background = hex;
+      d.onclick = async (e) => {
+        e.stopPropagation();
+        if (paletteTarget) await window.api.invoke('calendar-op', { op: 'color', calId: paletteTarget, backgroundColor: hex });
+        $('palette').style.display = 'none';
+      };
+      wrap.appendChild(d);
+    }
+    // 직접 지정: 컬러휠(원형 그라데이션) 스와치 → 네이티브 색 선택기
+    const wheel = document.createElement('div');
+    wheel.className = 'c wheel';
+    wheel.title = '직접 지정';
+    wheel.onclick = (e) => { e.stopPropagation(); $('paletteCustom').click(); };
+    wrap.appendChild(wheel);
+    $('paletteCustom').oninput = async (e) => {
+      if (paletteTarget) await window.api.invoke('calendar-op', { op: 'color', calId: paletteTarget, backgroundColor: e.target.value });
+    };
+  }
+
+  const BELL_ON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
+  const BELL_OFF_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/><line x1="3" y1="3" x2="21" y2="21"/></svg>';
+
+  function inlineAdd(parent, placeholder, onSubmit) {
+    const row = document.createElement('div');
+    row.className = 'inline-add';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = placeholder;
+    const ok = document.createElement('button');
+    ok.textContent = '추가';
+    ok.onclick = () => { if (inp.value.trim()) onSubmit(inp.value.trim()); row.remove(); };
+    inp.onkeydown = (e) => {
+      if (e.key === 'Enter' && inp.value.trim()) { onSubmit(inp.value.trim()); row.remove(); }
+      if (e.key === 'Escape') row.remove();
+    };
+    row.appendChild(inp); row.appendChild(ok);
+    parent.appendChild(row);
+    inp.focus();
+  }
+
+  // "＋ 캘린더 추가" 메뉴. 로컬은 지금 동작하고, 계정 연결·구독은 준비 중임을 숨기지 않는다
+  // (메뉴에 아예 없으면 "이 앱은 그걸 못한다"로 읽히고, 있는 척하면 눌렀을 때 아무 일도 안 난다).
+  function showAddMenu(anchor, container) {
+    const menu = $('addMenu');
+    menu.innerHTML = '';
+    const mk = (label, desc, fn) => {
+      const d = document.createElement('div');
+      d.className = 'item' + (fn ? '' : ' soon');
+      d.innerHTML = '<div class="t"></div><div class="d"></div>';
+      d.querySelector('.t').textContent = label;
+      d.querySelector('.d').textContent = desc;
+      if (fn) d.onclick = () => { menu.style.display = 'none'; fn(); };
+      menu.appendChild(d);
+    };
+
+    // 생성 가능한 계정(로컬)들 — 캘린더는 계정 아래에 만든다.
+    const localAccounts = [];
+    for (const svc of (calendarsReg && calendarsReg.services) || []) {
+      if (svc.type !== 'local') continue;
+      for (const acc of svc.accounts || []) localAccounts.push(acc);
+    }
+
+    mk('새 캘린더', '이 컴퓨터에 캘린더를 하나 더 만듭니다', () => {
+      const acc = localAccounts[0];
+      if (!acc) return;
+      inlineAdd(container, '새 캘린더 이름', v =>
+        window.api.invoke('calendar-op', {
+          op: 'add', accountId: acc.id, summary: v,
+          backgroundColor: CAL_PALETTE[Math.floor(Math.random() * CAL_PALETTE.length)],
+        }));
+    });
+    mk('계정(그룹) 추가', '캘린더를 묶어 둘 그룹을 만듭니다 (예: 업무, 개인)', () => {
+      inlineAdd(container, '계정(그룹) 이름', v =>
+        window.api.invoke('calendar-op', { op: 'add-account', serviceType: 'local', label: v }));
+    });
+    mk('ICS 파일 구독', '읽기 전용 — 디스크의 .ics 파일 (공유 폴더도 됩니다)', () => {
+      showSubscribeForm(container);
+    });
+
+    const r = anchor.getBoundingClientRect();
+    menu.style.display = 'block';
+    menu.style.left = Math.max(4, Math.min(r.left, window.innerWidth - 250)) + 'px';
+    menu.style.top = Math.max(4, r.top - menu.offsetHeight - 6) + 'px';
+  }
+
+  // ICS 구독 입력 — 디스크의 .ics 파일 경로만 받는다.
+  function showSubscribeForm(container) {
+    const box = document.createElement('div');
+    box.className = 'subform';
+    box.innerHTML =
+      '<input class="v" type="text" placeholder=".ics 파일 경로 (공유 폴더도 됩니다)">' +
+      '<input class="n" type="text" placeholder="이름 (비우면 캘린더 이름 사용)">' +
+      '<div class="row"><label>갱신</label><input class="r" type="number" min="1" max="1440" value="60"><span>분마다</span>' +
+      '<span class="sp"></span><button class="ok">구독</button><button class="no">취소</button></div>' +
+      '<div class="msg"></div>';
+    container.appendChild(box);
+    const val = box.querySelector('.v');
+    const msg = box.querySelector('.msg');
+    val.focus();
+
+    box.querySelector('.no').onclick = () => box.remove();
+    box.querySelector('.ok').onclick = async () => {
+      const v = val.value.trim();
+      if (!v) { msg.textContent = '파일 경로를 넣으세요'; return; }
+      const isUrl = false; // 이 빌드는 파일만 받는다
+      msg.textContent = '가져오는 중…';
+      const ok = await window.api.invoke('calendar-op', {
+        op: 'add-subscription',
+        sourceKind: isUrl ? 'url' : 'file',
+        sourceValue: v,
+        summary: box.querySelector('.n').value.trim() || (isUrl ? 'ICS 구독' : v.split(/[\\/]/).pop()),
+        refreshMinutes: parseInt(box.querySelector('.r').value, 10) || 60,
+      });
+      if (!ok) { msg.textContent = '추가하지 못했습니다'; return; }
+      box.remove();
+    };
+    val.onkeydown = (e) => { if (e.key === 'Enter') box.querySelector('.ok').click(); };
+  }
+
+
+  function renderSidebar() {
+    const side = $('side');
+    side.innerHTML = '';
+    if (!calendarsReg) return;
+    for (const svc of calendarsReg.services) {
+      const svcHd = document.createElement('div');
+      svcHd.className = 'svc-hd';
+      svcHd.textContent = svc.name || svc.type;
+      side.appendChild(svcHd);
+      for (const acc of svc.accounts || []) {
+        const accEl = document.createElement('div');
+        accEl.className = 'acc';
+        const hd = document.createElement('div');
+        hd.className = 'acc-hd';
+        const lbl = document.createElement('span');
+        lbl.textContent = acc.label;
+        lbl.ondblclick = () => inlineAdd(accEl, '계정 이름 변경', v =>
+          window.api.invoke('calendar-op', { op: 'rename-account', accountId: acc.id, label: v }));
+        const sp = document.createElement('span'); sp.className = 'sp';
+        const btnAddCal = document.createElement('button');
+        btnAddCal.textContent = '＋';
+        btnAddCal.title = '이 계정에 캘린더 추가';
+        btnAddCal.onclick = () => inlineAdd(accEl, '새 캘린더 이름', v =>
+          window.api.invoke('calendar-op', { op: 'add', accountId: acc.id, summary: v,
+            backgroundColor: CAL_PALETTE[Math.floor(Math.random() * CAL_PALETTE.length)] }));
+        hd.appendChild(lbl); hd.appendChild(sp); hd.appendChild(btnAddCal);
+        const hasPrimary = (acc.calendars || []).some(c => c.primary);
+        if (!hasPrimary) {
+          const btnDelAcc = document.createElement('button');
+          btnDelAcc.textContent = '✕';
+          btnDelAcc.title = '계정 제거';
+          btnDelAcc.onclick = async () => {
+            const r = await window.api.invoke('confirm', {
+              message: `계정 "${acc.label}"을(를) 제거할까요? 소속 캘린더와 일정이 함께 삭제됩니다.`,
+              buttons: ['제거', '취소'] });
+            if (r === 0) window.api.invoke('calendar-op', { op: 'remove-account', accountId: acc.id });
+          };
+          hd.appendChild(btnDelAcc);
+        }
+        accEl.appendChild(hd);
+
+        for (const cal of acc.calendars || []) {
+          const row = document.createElement('div');
+          row.className = 'cal-row';
+          const chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.checked = cal.selected !== false;
+          chk.onchange = () => window.api.invoke('calendar-op', { op: 'toggle', calId: cal.id, selected: chk.checked });
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          dot.style.background = cal.backgroundColor || '#039be5';
+          dot.title = '색상 지정';
+          dot.onclick = (e) => {
+            e.stopPropagation();
+            paletteTarget = cal.id;
+            const p = $('palette');
+            p.style.display = 'block';
+            const r = dot.getBoundingClientRect();
+            p.style.left = Math.min(r.left, window.innerWidth - 190) + 'px';
+            p.style.top = (r.bottom + 4) + 'px';
+          };
+          const nm = document.createElement('span');
+          nm.className = 'nm' + (cal.selected === false ? ' off' : '');
+          nm.textContent = cal.summary;
+          nm.title = cal.summary + ' (더블클릭: 이름 변경)';
+          nm.ondblclick = () => inlineAdd(accEl, '캘린더 이름 변경', v =>
+            window.api.invoke('calendar-op', { op: 'rename', calId: cal.id, summary: v }));
+          // 구독 캘린더는 우리가 소유하지 않는다 — 이름 변경을 막고 읽기 전용임을 보여 준다.
+          const sub = !!cal.source;
+          if (sub) {
+            nm.ondblclick = null;
+            nm.title = cal.summary + ' — 구독(읽기 전용) · ' + cal.source.value;
+          }
+
+          const bell = document.createElement('button');
+          bell.className = 'ic' + (cal.alarmsEnabled === false ? ' bell-off' : '');
+          bell.innerHTML = cal.alarmsEnabled === false ? BELL_OFF_SVG : BELL_ON_SVG;
+          bell.title = cal.alarmsEnabled === false ? '알람 꺼짐 — 켜기' : '알람 켜짐 — 끄기';
+          bell.onclick = () => window.api.invoke('calendar-op', { op: 'alarms', calId: cal.id, alarmsEnabled: cal.alarmsEnabled === false });
+
+          row.appendChild(chk); row.appendChild(dot); row.appendChild(nm);
+          if (sub) {
+            const ro = document.createElement('span');
+            ro.className = 'ro';
+            ro.textContent = '구독';
+            row.appendChild(ro);
+            const refresh = document.createElement('button');
+            refresh.className = 'ic';
+            refresh.textContent = '↻';
+            refresh.title = '지금 갱신';
+            refresh.onclick = () => window.api.invoke('calendar-op', { op: 'refresh-subscription', calId: cal.id });
+            row.appendChild(refresh);
+          }
+          row.appendChild(bell);
+          if (!cal.primary) {
+            const del = document.createElement('button');
+            del.className = 'ic';
+            del.textContent = '✕';
+            del.title = '캘린더 삭제';
+            del.onclick = async () => {
+              const r = await window.api.invoke('confirm', {
+                message: `캘린더 "${cal.summary}"을(를) 삭제할까요? 소속 일정도 함께 삭제됩니다.`,
+                buttons: ['삭제', '취소'] });
+              if (r === 0) window.api.invoke('calendar-op', { op: 'remove', calId: cal.id });
+            };
+            row.appendChild(del);
+          }
+          accEl.appendChild(row);
+        }
+        side.appendChild(accEl);
+      }
+    }
+    // 추가 진입점은 하나로 모은다 — 캘린더든 계정이든 구독이든 여기서 시작한다.
+    // (버튼이 계정 헤더에만 숨어 있으면 처음 쓰는 사람은 추가하는 길을 못 찾는다.)
+    const foot = document.createElement('div');
+    foot.className = 'side-foot';
+    const bAdd = document.createElement('button');
+    bAdd.textContent = '＋ 캘린더 추가…';
+    bAdd.onclick = (e) => { e.stopPropagation(); showAddMenu(bAdd, foot); };
+    foot.appendChild(bAdd);
+    side.appendChild(foot);
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!$('palette').contains(e.target) && !e.target.classList.contains('dot')) {
+      $('palette').style.display = 'none';
+    }
+    if (!$('addMenu').contains(e.target)) $('addMenu').style.display = 'none';
+  });
+
+  async function refreshSidebar() {
+    calendarsReg = await window.api.invoke('get-calendars');
+    renderSidebar();
+  }
+
+  window.api.on('data-changed', async () => {
+    if (calendar) calendar.refetchEvents();
+    refreshSidebar();
+    // 설정(스냅 등) 변경도 열려 있는 캘린더에 즉시 반영
+    try {
+      const s = await window.api.invoke('get-settings');
+      if (s && calendar && s.snapMinutes !== settings.snapMinutes) {
+        settings = s;
+        calendar.setOption('snapDuration', snapStr(s.snapMinutes));
+      } else if (s) {
+        settings = s;
+      }
+    } catch (e) {}
+  });
+
+  (async () => {
+    const init = await window.api.invoke('get-init');
+    settings = init.settings;
+    calendarsReg = init.calendars;
+    buildPalette();
+    renderSidebar();
+    initCalendar();
+  })();
+})();
+</script>
+</body>
+</html>

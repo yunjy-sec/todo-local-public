@@ -1,0 +1,277 @@
+using System;
+using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
+namespace TodoPopup
+{
+    public enum PopupAction
+    {
+        Ack,
+        Snooze,
+        Done,
+        Cancel
+    }
+
+    public class PopupForm : Form
+    {
+        public event Action<PopupForm, TodoItem, PopupAction, int> ActionChosen;
+
+        private static readonly Color BorderColor = Color.FromArgb(178, 182, 192);
+        private static readonly Color HeaderColor = Color.FromArgb(244, 244, 246);
+        private static readonly Color AccentColor = Color.FromArgb(37, 99, 235);
+        private static readonly Color DangerColor = Color.FromArgb(200, 42, 42);
+        private static readonly Color GrayText = Color.FromArgb(96, 100, 110);
+
+        private readonly TodoItem _todo;
+        private readonly bool _isPreview;
+        private Label _lblTitle;
+        private Label _lblInfo;
+        private Label _lblNote;
+        private Button _btnSnooze;
+        private Timer _refresh;
+        private bool _chosen;
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        public TodoItem Todo { get { return _todo; } }
+        public bool IsPreview { get { return _isPreview; } }
+
+        // TrayContext가 관리하는 스택 위치 슬롯
+        public int Slot;
+
+        protected override bool ShowWithoutActivation
+        {
+            get { return true; }
+        }
+
+        public PopupForm(TodoItem todo, AppSettings st, bool isPreview)
+        {
+            _todo = todo;
+            _isPreview = isPreview;
+
+            AutoScaleDimensions = new SizeF(96F, 96F);
+            AutoScaleMode = AutoScaleMode.Dpi;
+            FormBorderStyle = FormBorderStyle.None;
+            ShowInTaskbar = false;
+            TopMost = true;
+            StartPosition = FormStartPosition.Manual;
+            KeyPreview = true;
+            BackColor = Color.White;
+            Opacity = st.Opacity;
+            Size = new Size(st.PopupWidth, st.PopupHeight);
+            MinimumSize = new Size(260, 130);
+            Font = new Font("맑은 고딕", 9F);
+            SetStyle(ControlStyles.ResizeRedraw, true);
+
+            BuildUi(st);
+            UpdateInfo();
+
+            _refresh = new Timer();
+            _refresh.Interval = 30000;
+            _refresh.Tick += delegate { UpdateInfo(); };
+            _refresh.Start();
+        }
+
+        private void BuildUi(AppSettings st)
+        {
+            Panel header = new Panel();
+            header.Dock = DockStyle.Top;
+            header.Height = 26;
+            header.BackColor = HeaderColor;
+
+            Label lblHeader = new Label();
+            lblHeader.Text = "≡  할 일 알림";
+            lblHeader.ForeColor = GrayText;
+            lblHeader.Font = new Font("맑은 고딕", 8.5F);
+            lblHeader.Location = new Point(10, 5);
+            lblHeader.AutoSize = true;
+            header.Controls.Add(lblHeader);
+
+            Label lblDragHint = new Label();
+            lblDragHint.Text = "드래그로 이동";
+            lblDragHint.ForeColor = Color.FromArgb(150, 154, 162);
+            lblDragHint.Font = new Font("맑은 고딕", 8F);
+            lblDragHint.AutoSize = true;
+            lblDragHint.Location = new Point(Width - 90, 6);
+            lblDragHint.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            header.Controls.Add(lblDragHint);
+
+            _lblTitle = new Label();
+            _lblTitle.Font = new Font("맑은 고딕", 11.5F, FontStyle.Bold);
+            _lblTitle.Location = new Point(14, 34);
+            _lblTitle.Size = new Size(Width - 28, 26);
+            _lblTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _lblTitle.AutoEllipsis = true;
+            _lblTitle.Text = _todo.Title;
+
+            _lblInfo = new Label();
+            _lblInfo.ForeColor = GrayText;
+            _lblInfo.Location = new Point(14, 62);
+            _lblInfo.Size = new Size(Width - 28, 18);
+            _lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+            _lblNote = new Label();
+            _lblNote.ForeColor = Color.FromArgb(150, 154, 162);
+            _lblNote.Font = new Font("맑은 고딕", 8F);
+            _lblNote.Location = new Point(14, 82);
+            _lblNote.Size = new Size(Width - 28, 16);
+            _lblNote.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _lblNote.Text = _isPreview
+                ? "미리보기입니다 — 아무 버튼이나 누르면 닫힙니다"
+                : string.Format("완료·취소 전까지 {0}분마다 다시 알립니다", _todo.RenotifyMinutes);
+
+            TableLayoutPanel buttons = new TableLayoutPanel();
+            buttons.Dock = DockStyle.Bottom;
+            buttons.Height = 42;
+            buttons.Padding = new Padding(8, 4, 8, 8);
+            buttons.ColumnCount = 5;
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 26F));
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+
+            Button btnAck = MakeButton("확인", Color.White, Color.FromArgb(55, 58, 64));
+            btnAck.Click += delegate { Choose(PopupAction.Ack, 0); };
+
+            _btnSnooze = MakeButton(string.Format("{0}분 뒤", st.DefaultSnoozeMinutes), Color.White, Color.FromArgb(55, 58, 64));
+            int defSnooze = st.DefaultSnoozeMinutes;
+            _btnSnooze.Click += delegate { Choose(PopupAction.Snooze, defSnooze); };
+
+            Button btnMore = MakeButton("▾", Color.White, GrayText);
+            ContextMenuStrip menu = new ContextMenuStrip();
+            AddSnoozeMenu(menu, "5분 뒤", 5);
+            AddSnoozeMenu(menu, "10분 뒤", 10);
+            AddSnoozeMenu(menu, "15분 뒤", 15);
+            AddSnoozeMenu(menu, "30분 뒤", 30);
+            AddSnoozeMenu(menu, "1시간 뒤", 60);
+            AddSnoozeMenu(menu, "3시간 뒤", 180);
+            AddSnoozeMenu(menu, "내일 이 시간", 1440);
+            btnMore.Click += delegate { menu.Show(btnMore, new Point(0, btnMore.Height)); };
+
+            Button btnDone = MakeButton("완료", AccentColor, Color.White);
+            btnDone.FlatAppearance.BorderColor = AccentColor;
+            btnDone.Click += delegate { Choose(PopupAction.Done, 0); };
+
+            Button btnCancel = MakeButton("취소", Color.White, DangerColor);
+            btnCancel.Click += delegate { Choose(PopupAction.Cancel, 0); };
+
+            buttons.Controls.Add(btnAck, 0, 0);
+            buttons.Controls.Add(_btnSnooze, 1, 0);
+            buttons.Controls.Add(btnMore, 2, 0);
+            buttons.Controls.Add(btnDone, 3, 0);
+            buttons.Controls.Add(btnCancel, 4, 0);
+
+            Controls.Add(_lblTitle);
+            Controls.Add(_lblInfo);
+            Controls.Add(_lblNote);
+            Controls.Add(buttons);
+            Controls.Add(header);
+
+            HookDrag(this);
+            HookDrag(header);
+            HookDrag(lblHeader);
+            HookDrag(lblDragHint);
+            HookDrag(_lblTitle);
+            HookDrag(_lblInfo);
+            HookDrag(_lblNote);
+        }
+
+        private void AddSnoozeMenu(ContextMenuStrip menu, string label, int minutes)
+        {
+            int captured = minutes;
+            menu.Items.Add(label, null, delegate { Choose(PopupAction.Snooze, captured); });
+        }
+
+        private Button MakeButton(string text, Color back, Color fore)
+        {
+            Button b = new Button();
+            b.Text = text;
+            b.FlatStyle = FlatStyle.Flat;
+            b.FlatAppearance.BorderColor = Color.FromArgb(203, 206, 213);
+            b.BackColor = back;
+            b.ForeColor = fore;
+            b.Dock = DockStyle.Fill;
+            b.Margin = new Padding(3, 0, 3, 0);
+            b.TabStop = false;
+            return b;
+        }
+
+        private void HookDrag(Control c)
+        {
+            c.MouseDown += delegate(object sender, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+                }
+            };
+        }
+
+        public void UpdateInfo()
+        {
+            DateTime due = _todo.GetDue();
+            DateTime now = DateTime.Now;
+            string overdue;
+            TimeSpan diff = now - due;
+            if (diff.TotalMinutes < 1 && diff.TotalMinutes > -1) overdue = "지금";
+            else if (diff.TotalMinutes < 0) overdue = "곧";
+            else if (diff.TotalMinutes < 60) overdue = string.Format("{0}분 지남", (int)diff.TotalMinutes);
+            else overdue = string.Format("{0}시간 {1}분 지남", (int)diff.TotalHours, diff.Minutes);
+
+            int count = _todo.NotifyCount;
+            if (count < 1) count = 1;
+            _lblInfo.Text = string.Format("{0} 예정 · {1} · {2}번째 알림",
+                TimeUtil.FormatClock(due), overdue, count);
+        }
+
+        private void Choose(PopupAction action, int minutes)
+        {
+            if (_chosen) return;
+            _chosen = true;
+            Action<PopupForm, TodoItem, PopupAction, int> h = ActionChosen;
+            if (h != null) h(this, _todo, action, minutes);
+            Close();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Escape)
+            {
+                e.Handled = true;
+                Choose(PopupAction.Ack, 0);
+                return;
+            }
+            base.OnKeyDown(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            using (Pen p = new Pen(BorderColor))
+            {
+                e.Graphics.DrawRectangle(p, 0, 0, Width - 1, Height - 1);
+            }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (_refresh != null)
+            {
+                _refresh.Stop();
+                _refresh.Dispose();
+                _refresh = null;
+            }
+            base.OnFormClosed(e);
+        }
+    }
+}

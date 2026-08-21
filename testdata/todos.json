@@ -1,0 +1,70 @@
+{
+  "kind": "calendar#events",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "id": "fixture-single",
+      "status": "confirmed",
+      "summary": "픽스처 단일 일정",
+      "created": "2026-08-20T09:00:00+09:00",
+      "updated": "2026-08-20T09:00:00+09:00",
+      "start": { "dateTime": "2026-08-20T14:00:00+09:00" },
+      "end": { "dateTime": "2026-08-20T14:30:00+09:00" },
+      "reminders": { "useDefault": false, "overrides": [{ "method": "popup", "minutes": 0 }] },
+      "extendedProperties": {
+        "private": {
+          "todoStatus": "pending",
+          "renotifyMinutes": "5",
+          "notifyCount": "0",
+          "calendarId": "default"
+        }
+      }
+    },
+    {
+      "kind": "calendar#event",
+      "id": "fixture-recurring",
+      "status": "confirmed",
+      "summary": "픽스처 반복 일정",
+      "created": "2026-08-20T09:00:00+09:00",
+      "updated": "2026-08-20T09:00:00+09:00",
+      "start": { "dateTime": "2026-08-24T10:00:00+09:00" },
+      "end": { "dateTime": "2026-08-24T11:00:00+09:00" },
+      "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"],
+      "colorId": "10",
+      "reminders": {
+        "useDefault": false,
+        "overrides": [
+          { "method": "popup", "minutes": 0 },
+          { "method": "popup", "minutes": 30 }
+        ]
+      },
+      "extendedProperties": {
+        "private": {
+          "todoStatus": "pending",
+          "renotifyMinutes": "5",
+          "notifyCount": "0",
+          "calendarId": "default"
+        }
+      }
+    },
+    {
+      "kind": "calendar#event",
+      "id": "fixture-done",
+      "status": "confirmed",
+      "summary": "픽스처 완료 일정",
+      "created": "2026-08-19T09:00:00+09:00",
+      "updated": "2026-08-19T10:00:00+09:00",
+      "start": { "dateTime": "2026-08-19T09:00:00+09:00" },
+      "end": { "dateTime": "2026-08-19T09:30:00+09:00" },
+      "extendedProperties": {
+        "private": {
+          "todoStatus": "done",
+          "renotifyMinutes": "5",
+          "notifyCount": "1",
+          "closedAt": "2026-08-19T10:00:00+09:00",
+          "calendarId": "work"
+        }
+      }
+    }
+  ]
+}

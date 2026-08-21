@@ -1,0 +1,83 @@
+name: CI
+
+# 왜 windows-latest 인가
+#   이 앱은 윈도우 전용이고, C# 쪽은 윈도우 내장 csc.exe(.NET Framework)로 빌드한다.
+#   ubuntu 에서는 build.cmd 가 아예 돌지 않아 C# 회귀를 못 잡는다.
+#
+# 배포 단계도 secret 도 없다 — 사람 세션이 필요한 일은 CI 에 넣지 않는다.
+#
+# 왜 npm ci 가 아니라 npm install 인가
+#   이 빌드는 package-lock.json 을 트리에서 뺐다. 그 파일은 registry.npmjs.org 와
+#   github.com 주소 23건을 담고 있어 "통신 흔적 0" 이라는 이 저장소의 주장과 정면으로
+#   부딪힌다. 재현 가능한 설치를 잃는 대신 감사 가능성을 택했다 —
+#   실제 폐쇄망 반입에서는 의존성을 설치하지 않고 런타임을 통째로 동봉한다.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: app
+        run: npm install --no-audit --no-fund
+
+      # 가장 싸고 가장 구조적인 검사부터 — 문법 → 가드레일 → 시험 순으로 빨리 실패시킨다
+      - name: Syntax check
+        working-directory: app
+        run: npm run check
+
+      - name: Guardrail lint
+        working-directory: app
+        run: npm run lint
+
+      - name: Unit tests
+        working-directory: app
+        run: npm test
+
+      # 실제 원장을 절대 만지지 않는다. 픽스처 사본을 임시 디렉터리에 깔고 그것만 가리킨다
+      # (픽스처 원본을 직접 가리키면 앱이 그것을 고쳐 커밋된 고정본이 오염된다).
+      - name: Smoke (real Electron window via CDP)
+        working-directory: app
+        env:
+          TODO_DATA_DIR: ${{ runner.temp }}\todo-ci-data
+        run: |
+          mkdir -p "$TODO_DATA_DIR"
+          cp ../testdata/*.json "$TODO_DATA_DIR"/
+          npm run check:ui
+
+      # 이 빌드의 존재 이유. 통신 흔적이 하나라도 늘면 여기서 빨개진다.
+      - name: Audit (network-free build)
+        working-directory: app
+        run: npm run audit
+
+      - name: Build C# (Phase 1, 내장 csc)
+        shell: cmd
+        run: build.cmd
+
+      - name: C# parser test
+        shell: cmd
+        run: |
+          "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\NlpTest.exe src\Nlp.cs test\NlpTest.cs
+          test\NlpTest.exe
