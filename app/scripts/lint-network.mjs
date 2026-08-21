@@ -74,7 +74,7 @@ const NETWORK_GATEWAYS = [];
 //   tools/cut/            통신 제거판 생성기와 그 산출물 템플릿. 무엇이 통신인지 **판정하는**
 //                         쪽이라 금지 낱말을 패턴·문자열로 품는다(app/scripts/ 와 같은 이유).
 //                         앱과 함께 로드되지 않고, 생성된 트리에는 이 디렉터리가 아예 없다.
-const EXEMPT_PREFIXES = ['app/scripts/', 'tools/cut/'];
+const EXEMPT_PREFIXES = ['app/scripts/'];
 //   app/test/google-*.test.js  구글 어댑터 시험. 실제 구글에 붙지 않으려고 127.0.0.1 에
 //                         모의 서버를 띄워 왕복한다 — 네트워크를 흉내 내면 "2초에 끊고
 //                         재시도하지 않는다"는 계약을 확인할 수 없다(그것이 이 시험의 요점이다).

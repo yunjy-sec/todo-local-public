@@ -73,6 +73,9 @@ problems.push(...diffBothWays(
 ).map(m => 'app/scripts/ — ' + m));
 
 // ---- 2) 워크플로 필수 단계 ----
+// 요약에 찍는 수는 목록에서 나온다. 손으로 적어 두면 항목을 늘렸을 때 요약만 낡아
+// "16개를 확인했다" 고 거짓말을 한다(실제로 그랬다).
+let requiredCount = 0;
 const CI_PATH = join(ROOT_DIR, '.github', 'workflows', 'ci.yml');
 if (!existsSync(CI_PATH)) {
   problems.push('.github/workflows/ci.yml 가 없습니다 — CI 없이는 회귀가 사람 손에만 달린다.');
@@ -99,6 +102,7 @@ if (!existsSync(CI_PATH)) {
     [/build\.cmd/, 'C# 빌드 — Phase 1 구현이 깨져도 아무도 모른다'],
     [/NlpTest\.exe/, 'C# 파서 시험 — JS 포팅과 갈라지는 것을 잡는다'],
   ];
+  requiredCount = REQUIRED.length;
   for (const [re, why] of REQUIRED) {
     if (!re.test(ci)) {
       problems.push(`.github/workflows/ci.yml — 필수 단계 누락: ${re.source} (${why})`);
@@ -120,4 +124,4 @@ for (const f of ['todos.json', 'calendars.json']) {
 
 process.exit(report('lint:ci',
   problems,
-  `자기등록 4자리 일치(lint ${lintAllNames.length}종) · CI 필수 단계 16개 · 픽스처 2종`));
+  `자기등록 4자리 일치(lint ${lintAllNames.length}종) · CI 필수 단계 ${requiredCount}개 · 픽스처 2종`));
