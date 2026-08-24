@@ -116,11 +116,24 @@
       </div>
       <div class="f"><label>팝업 불투명도</label><input id="sOpacity" type="range" min="30" max="100"><span id="sOpacityVal" class="u"></span></div>
       <div class="f"><label>팝업 크기</label><input id="sW" type="number" min="260" max="900"><span class="u">×</span><input id="sH" type="number" min="130" max="500"></div>
+      <div class="f"><label>눈에 띄는 효과</label><select id="sEffect">
+          <option value="flash">번쩍임 (기본)</option>
+          <option value="pulse">테두리 맥박</option>
+          <option value="glow">붉은 번짐</option>
+          <option value="shake">흔들림</option>
+          <option value="rainbow">색 순환</option>
+          <option value="none">끔</option>
+        </select>
+        <span class="u">알림을 놓치지 않게 잠깐 움직입니다</span></div>
+      <div class="f"><label>모든 모니터에 표시</label><input id="sAllMon" type="checkbox">
+        <span class="u">끄면 주 모니터에만 뜹니다</span></div>
       <div class="f"><label>기본 재알림</label><input id="sRenotify" type="number" min="1" max="720"><span class="u">분마다</span></div>
       <div class="f"><label>기본 미루기</label><input id="sSnooze" type="number" min="1" max="720"><span class="u">분</span></div>
       <div class="f"><label>기본 미리 알림</label><input id="sReminders" type="text" placeholder="예: 10, 30 (분)"></div>
       <div class="f"><label>기본 캘린더</label><select id="sDefCal"></select></div>
       <div class="f"><label>알림음</label><input id="sSound" type="checkbox"></div>
+      <div class="f"><label>예약 시 초 버림</label><input id="sTruncSec" type="checkbox">
+        <span class="u">14:00:30 에 "1분 뒤" → 14:01:00 (끄면 14:01:30)</span></div>
       <div class="f"><label>자동 실행</label><input id="sAutostart" type="checkbox"><span class="u">윈도우 시작 시</span></div>
       <div class="f"><label>시간 표기</label>
         <select id="sTimeFormat">
@@ -470,10 +483,13 @@
     $('sOpacity').value = Math.round(s.opacity * 100);
     $('sOpacityVal').textContent = Math.round(s.opacity * 100) + '%';
     $('sW').value = s.popupWidth; $('sH').value = s.popupHeight;
+    $('sAllMon').checked = s.popupAllMonitors;
+    $('sEffect').value = s.popupEffect;
     $('sRenotify').value = s.defaultRenotifyMinutes;
     $('sSnooze').value = s.defaultSnoozeMinutes;
     $('sReminders').value = (s.defaultReminderMinutes || []).join(', ');
     $('sSound').checked = s.playSound;
+    $('sTruncSec').checked = s.truncateSeconds;
     $('sAutostart').checked = s.autostart;
     $('sCalOpacity').value = Math.round(s.calendarOpacity * 100);
     $('sCalOpacityVal').textContent = Math.round(s.calendarOpacity * 100) + '%';
@@ -494,10 +510,13 @@
       opacity: parseInt($('sOpacity').value, 10) / 100,
       popupWidth: parseInt($('sW').value, 10),
       popupHeight: parseInt($('sH').value, 10),
+      popupEffect: $('sEffect').value,
+      popupAllMonitors: $('sAllMon').checked,
       defaultRenotifyMinutes: parseInt($('sRenotify').value, 10),
       defaultSnoozeMinutes: parseInt($('sSnooze').value, 10),
       defaultReminderMinutes: $('sReminders').value.split(',').map(x => parseInt(x.trim(), 10)).filter(x => x > 0),
       playSound: $('sSound').checked,
+      truncateSeconds: $('sTruncSec').checked,
       autostart: $('sAutostart').checked,
       calendarOpacity: parseInt($('sCalOpacity').value, 10) / 100,
       calendarOpaqueOnFocus: $('sCalFocus').checked,

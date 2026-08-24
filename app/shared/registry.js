@@ -67,10 +67,17 @@
     { key: 'opacity', type: 'ratio', min: 0.3, max: 1, def: 0.95, label: '팝업 불투명도', ui: 'range', section: 'popup' },
     { key: 'popupWidth', type: 'int', min: 260, max: 900, def: 380, label: '팝업 너비', ui: 'number', section: 'popup' },
     { key: 'popupHeight', type: 'int', min: 130, max: 500, def: 170, label: '팝업 높이', ui: 'number', section: 'popup' },
+    // 알림이 떠도 못 보고 지나치면 이 앱은 아무것도 한 것이 없다. 기본으로 눈에 띄게 한다.
+    { key: 'popupEffect', type: 'enum', values: C.POPUP_EFFECTS, def: 'flash', label: '눈에 띄는 효과', ui: 'select', section: 'popup' },
+    // 모니터가 여럿이면 알림이 뜬 화면을 안 보고 있을 수 있다. 기본은 전부에 띄운다.
+    { key: 'popupAllMonitors', type: 'bool', def: true, label: '모든 모니터에 표시', ui: 'check', section: 'popup' },
     { key: 'defaultRenotifyMinutes', type: 'int', min: 1, max: 720, def: 5, label: '기본 재알림', ui: 'number', section: 'alarm' },
     { key: 'defaultSnoozeMinutes', type: 'int', min: 1, max: 720, def: 10, label: '기본 미루기', ui: 'number', section: 'alarm' },
     { key: 'defaultReminderMinutes', type: 'intlist', def: [], label: '기본 미리 알림', ui: 'text', section: 'alarm' },
     { key: 'playSound', type: 'bool', def: true, label: '알림음', ui: 'check', section: 'alarm' },
+    // "1분 뒤" 를 14:00:30 에 말하면 14:01:30 이 아니라 14:01:00 에 울린다.
+    // 사람은 분 단위로 생각하지 초를 세지 않는다 — 기본으로 초를 버린다.
+    { key: 'truncateSeconds', type: 'bool', def: true, label: '예약 시 초 버림', ui: 'check', section: 'alarm' },
     { key: 'defaultCalendarId', type: 'string', def: 'default', label: '기본 캘린더', ui: 'select', section: 'alarm' },
     { key: 'autostart', type: 'bool', def: true, label: '자동 실행', ui: 'check', section: 'app' },
     { key: 'showClosed', type: 'bool', def: true, label: '지난 항목 표시', ui: 'check', section: 'app' },

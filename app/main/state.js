@@ -417,9 +417,25 @@ class Store {
 
   // ---- 변경 조작 ----
 
+  /**
+   * 예약 시각의 초를 버린다(설정 truncateSeconds, 기본 켬).
+   *
+   * 14:00:30 에 "1분 뒤" 라고 하면 사람은 14:01 을 뜻하지 14:01:30 을 뜻하지 않는다.
+   * 초를 남겨 두면 알림이 늘 어중간한 자리에서 울리고, 목록의 "14:01" 과도 어긋난다
+   * (화면은 초를 안 보여 주므로 사용자는 왜 늦는지 알 수가 없다).
+   * 초를 그대로 두고 싶은 사람을 위해 끌 수 있게 두었다.
+   */
+  snapSeconds(d) {
+    if (!d || !(d instanceof Date) || isNaN(d.getTime())) return d;
+    if (this.settings && this.settings.truncateSeconds === false) return d;
+    const out = new Date(d.getTime());
+    out.setSeconds(0, 0);
+    return out;
+  }
+
   addEvent(payload) {
-    const start = fromRfc3339(payload.start);
-    const end = payload.end ? fromRfc3339(payload.end) : null;
+    const start = this.snapSeconds(fromRfc3339(payload.start));
+    const end = payload.end ? this.snapSeconds(fromRfc3339(payload.end)) : null;
     const ev = model.newEvent({
       summary: payload.summary,
       start, end,
@@ -441,8 +457,8 @@ class Store {
     if (patch.summary !== undefined) ev.summary = patch.summary;
     if (patch.start !== undefined) {
       const before = model.getStart(ev);
-      model.setTimes(ev, fromRfc3339(patch.start),
-        patch.end ? fromRfc3339(patch.end) : null, !!patch.allDay);
+      model.setTimes(ev, this.snapSeconds(fromRfc3339(patch.start)),
+        patch.end ? this.snapSeconds(fromRfc3339(patch.end)) : null, !!patch.allDay);
       const after = model.getStart(ev);
       if (!before || !after || before.getTime() !== after.getTime()) {
         // 시각이 바뀌면 옛 일정 기준의 알림 상태는 무효다. 남겨 두면 새 시각에 알림이
@@ -692,7 +708,8 @@ class Store {
     const ev = this.find(masterId);
     if (!ev) return false;
     model.setInstState(ev, recur.isRecurring(ev) ? key : null,
-      { snoozeUntil: toRfc3339(new Date(Date.now() + minutes * 60000)) });
+      // 미루기도 같은 규칙이다 — "10분 뒤" 가 10분 30초 뒤면 사용자는 늦었다고 느낀다.
+      { snoozeUntil: toRfc3339(this.snapSeconds(new Date(Date.now() + minutes * 60000))) });
     this.save();
     return true;
   }

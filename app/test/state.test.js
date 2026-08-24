@@ -432,3 +432,32 @@ test('상세 폼 초기값은 회차 시각을 돌려준다', () => {
 test.after(() => {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 });
+
+/* 예약 시각의 초 버림.
+ *
+ * 14:00:30 에 "1분 뒤" 라고 말하면 사람은 14:01 을 뜻한다. 초를 그대로 두면 14:01:30 에
+ * 울리는데, 화면은 초를 보여 주지 않으므로 사용자는 "14:01 이라고 써 놓고 왜 늦게 뜨지"
+ * 만 보게 된다 — 원인을 짚을 방법이 없는 종류의 어긋남이다.
+ */
+test('예약 시각은 초를 버린다 (기본 켬)', () => {
+  const s = freshStore();
+  const id = s.addEvent({ summary: '1분 뒤', start: '2026-08-25T14:01:30+09:00' });
+  const start = model.getStart(s.find(id));
+  assert.strictEqual(start.getSeconds(), 0, '초가 남으면 알림이 어중간한 자리에서 울린다');
+  assert.strictEqual(start.getMinutes(), 1, '분은 그대로여야 한다(반올림이 아니라 버림)');
+});
+
+test('초 버림은 끌 수 있다', () => {
+  const s = freshStore();
+  s.settings = Object.assign({}, s.settings, { truncateSeconds: false });
+  const id = s.addEvent({ summary: '그대로', start: '2026-08-25T14:01:30+09:00' });
+  assert.strictEqual(model.getStart(s.find(id)).getSeconds(), 30, '끄면 적은 그대로 둔다');
+});
+
+test('미루기도 초를 버린다', () => {
+  const s = freshStore();
+  const id = s.addEvent({ summary: '미룰 것', start: '2026-08-25T14:00:00+09:00' });
+  s.snooze(id, null, 10);
+  const until = new Date(model.priv(s.find(id)).snoozeUntil);
+  assert.strictEqual(until.getSeconds(), 0, '"10분 뒤" 가 10분 30초 뒤면 사용자는 늦었다고 느낀다');
+});

@@ -22,6 +22,11 @@
   // extendedProperties.private.todoStatus 에 저장된다.
   var TODO_STATUS = ['pending', 'done', 'cancelled'];
 
+  // 팝업이 눈에 띄게 하는 방법. 알림이 떠도 못 보고 지나치면 이 앱은 아무것도 한 것이 없다.
+  // 기본은 flash — 가장 눈에 잘 들어오면서 화면을 가리지 않는다.
+  // none 은 "효과 끔"이다. 어휘에 넣어 두어야 설정 화면이 그것을 고를 수 있다.
+  var POPUP_EFFECTS = ['flash', 'pulse', 'glow', 'shake', 'rainbow', 'none'];
+
   // 팝업 버튼이 낼 수 있는 결과.
   var POPUP_ACTION_KEYS = ['ack', 'snooze', 'done', 'cancel'];
 
@@ -177,6 +182,7 @@
     SCOPES: SCOPES,
     RECUR_FREQS: RECUR_FREQS,
     POPUP_POSITIONS: POPUP_POSITIONS,
+    POPUP_EFFECTS: POPUP_EFFECTS,
     ACCESS_ROLES: ACCESS_ROLES,
     SERVICE_TYPES: SERVICE_TYPES,
     SUBSCRIPTION_SOURCES: SUBSCRIPTION_SOURCES,

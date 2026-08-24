@@ -591,6 +591,39 @@ try {
     }
   }
 
+  // 알림 팝업이 실제로 눈에 띄게 그려지는가.
+  //   알림이 떠도 못 보고 지나치면 이 앱은 아무것도 한 것이 없다. 효과는 CSS 라
+  //   lint 로는 "설정이 있다" 까지만 알 수 있고, **창이 그것을 실제로 입었는지**는
+  //   창을 띄워 봐야만 안다.
+  await list.eval(`window.api.invoke('preview-popup', {})`);
+  let popupState = null;
+  try {
+    const popupTarget = await waitForTarget(t => t.url.includes('popup.html'), 12000);
+    const popup = await cdp(popupTarget.webSocketDebuggerUrl);
+    await sleep(600);
+    popupState = await popup.eval(`({
+      effect: document.body.dataset.effect || null,
+      title: (document.getElementById('title') || {}).textContent || '',
+      reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      headerAnim: getComputedStyle(document.querySelector('.header')).animationName,
+      bodyAnim: getComputedStyle(document.body).animationName,
+      animated: (() => {
+        const cs = getComputedStyle(document.querySelector('.header'));
+        const own = getComputedStyle(document.body);
+        return (cs.animationName && cs.animationName !== 'none')
+            || (own.animationName && own.animationName !== 'none');
+      })()
+    })`);
+    popup.close();
+  } catch (e) {
+    popupState = { error: e.message };
+  }
+  results.push(['팝업: 기본으로 눈에 띄는 효과가 걸린다',
+    !!popupState && popupState.effect === 'flash' && popupState.animated === true,
+    `팝업 상태 ${JSON.stringify(popupState)} — registry 의 popupEffect 기본값과 popup.html 의 ` +
+    `body[data-effect] 규칙을 보세요. reduced:true 면 OS 가 "움직임 줄이기" 를 켠 것인데, ` +
+    `그때도 효과가 (느리게라도) 살아 있어야 합니다 — 통째로 끄면 알림을 조용히 놓칩니다.`]);
+
   cal.close();
   list.close();
 } catch (e) {
