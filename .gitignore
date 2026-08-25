@@ -22,4 +22,3 @@ Desktop.ini
 dist/
 
 # 커밋 스탬프는 build.cmd 가 git 에서 만든다. 생성물에는 tools/cut 이 써 넣는다.
-commit.txt
