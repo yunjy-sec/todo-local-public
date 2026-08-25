@@ -96,24 +96,53 @@ namespace TodoPopup
                 todo.NotifyCount = todo.NotifyCount + 1;
                 Storage.SaveTodos(_todos);
             }
-            PopupForm pf = new PopupForm(todo, st, isPreview);
-            pf.Slot = index;
-            pf.Location = ComputePopupLocation(st, pf.Size, index);
-            pf.ActionChosen += OnPopupAction;
+            // 화면마다 하나씩 띄운다. 한 화면만 띄우면 그 모니터를 안 보고 있을 때 알림을
+            // 놓친다 — "완료·취소 전까지 계속 알린다" 는 약속이 거기서 조용히 깨진다.
+            Screen[] targets = st.PopupAllMonitors
+                ? Screen.AllScreens
+                : new Screen[] { Screen.PrimaryScreen };
+            if (targets == null || targets.Length == 0) targets = new Screen[] { Screen.PrimaryScreen };
+
             string id = todo.Id;
-            pf.FormClosed += delegate
+            List<PopupForm> twins = new List<PopupForm>();
+            PopupForm first = null;
+
+            foreach (Screen sc in targets)
             {
-                PopupForm cur;
-                if (_popups.TryGetValue(id, out cur) && cur == pf)
+                PopupForm pf = new PopupForm(todo, st, isPreview);
+                pf.Slot = index;
+                pf.Location = ComputePopupLocation(st, pf.Size, index, sc);
+                pf.ActionChosen += OnPopupAction;
+                twins.Add(pf);
+                if (first == null) first = pf;
+
+                PopupForm self = pf;
+                pf.FormClosed += delegate
                 {
-                    _popups.Remove(id);
-                    RaiseChanged(); // 목록의 '알림중' 상태 즉시 갱신
-                }
-            };
-            _popups[id] = pf;
-            pf.Show();
+                    // 한 화면의 창이 닫히면 그 알림은 끝난 것이다 — 나머지 화면의 쌍둥이도
+                    // 함께 닫는다. 안 그러면 다른 모니터에 유령 팝업이 남아 버튼이 두 번 눌린다.
+                    foreach (PopupForm other in twins)
+                    {
+                        if (other == self) continue;
+                        try { if (!other.IsDisposed) other.Close(); }
+                        catch { }
+                    }
+                    PopupForm cur;
+                    if (_popups.TryGetValue(id, out cur) && cur == first)
+                    {
+                        _popups.Remove(id);
+                        RaiseChanged(); // 목록의 '알림중' 상태 즉시 갱신
+                    }
+                };
+            }
+
+            _popups[id] = first;
+            foreach (PopupForm pf in twins) pf.Show();
             // DPI 자동 스케일로 실제 크기가 바뀔 수 있으므로 표시 후 위치를 재보정
-            pf.Location = ComputePopupLocation(st, pf.Size, index);
+            for (int i = 0; i < twins.Count; i++)
+            {
+                twins[i].Location = ComputePopupLocation(st, twins[i].Size, index, targets[i]);
+            }
             if (st.PlaySound)
             {
                 try { SystemSounds.Exclamation.Play(); }
@@ -121,9 +150,9 @@ namespace TodoPopup
             }
         }
 
-        private static Point ComputePopupLocation(AppSettings st, Size size, int index)
+        private static Point ComputePopupLocation(AppSettings st, Size size, int index, Screen screen)
         {
-            Rectangle wa = Screen.PrimaryScreen.WorkingArea;
+            Rectangle wa = (screen ?? Screen.PrimaryScreen).WorkingArea;
             int margin = 16;
             int step = size.Height + 8;
             int x, y;
@@ -164,10 +193,10 @@ namespace TodoPopup
             switch (action)
             {
                 case PopupAction.Ack:
-                    todo.SetSnooze(now.AddMinutes(todo.RenotifyMinutes));
+                    todo.SetSnooze(TimeUtil.SnapSeconds(now.AddMinutes(todo.RenotifyMinutes), _settings.TruncateSeconds));
                     break;
                 case PopupAction.Snooze:
-                    todo.SetSnooze(now.AddMinutes(minutes));
+                    todo.SetSnooze(TimeUtil.SnapSeconds(now.AddMinutes(minutes), _settings.TruncateSeconds));
                     break;
                 case PopupAction.Done:
                     todo.Status = TodoStatus.Done;

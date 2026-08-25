@@ -134,6 +134,12 @@ function saveCalendars(c) {
 
 
 
+/** 파일의 마지막 수정 시각. 읽지는 않는다 — 빌드 시각 표시에 쓴다.
+ *  파일 IO 는 이 파일 하나만 한다는 규약을 지키려고 여기에 둔다(lint:fs-gateway). */
+function fileMTime(filePath) {
+  try { return fs.statSync(filePath).mtime; } catch (e) { return null; }
+}
+
 /** 사용자가 지목한 바깥 텍스트 파일을 읽는다(구독용 .ics 등). 읽기 전용.
  *  우리 데이터 폴더가 아니라 임의 경로라 DATA_STORES 에 등록할 대상이 아니지만,
  *  파일 IO 는 이 파일 하나만 한다는 규약은 그대로 지킨다. */
@@ -241,7 +247,7 @@ function clampSettings(input) {
 module.exports = {
   dataDir, loadTodos, saveTodos, loadSettings, saveSettings,
   loadCalendars, saveCalendars,
-  loadSubCache, saveSubCache, readTextFile, loadOverlay, saveOverlay,
+  loadSubCache, saveSubCache, readTextFile, fileMTime, loadOverlay, saveOverlay,
   clampSettings, onSaveFailed, DEFAULT_CALENDARS,
   DEFAULT_SETTINGS: REG.settingsDefaults()
 };

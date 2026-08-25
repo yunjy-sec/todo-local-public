@@ -31,6 +31,11 @@ namespace TodoPopup
         private Button _btnSnooze;
         private Timer _refresh;
         private bool _chosen;
+        private Timer _blink;          // 눈에 띄는 효과
+        private bool _blinkOn;
+        private string _effect;
+        private Panel _header;         // 효과가 배경을 갈아 끼울 때 함께 바꾼다
+        private int _rainbowStep;
 
         [DllImport("user32.dll")]
         private static extern bool ReleaseCapture();
@@ -78,6 +83,90 @@ namespace TodoPopup
             _refresh.Interval = 30000;
             _refresh.Tick += delegate { UpdateInfo(); };
             _refresh.Start();
+
+            StartEffect(st);
+        }
+
+        // ───────── 눈에 띄는 효과 ─────────
+        // 알림이 떠도 못 보고 지나치면 이 앱은 아무것도 한 것이 없다. 그래서 기본으로 번쩍인다.
+        // **창 전체**의 배경을 바꾼다 — 제목 줄만 바뀌면 넓은 본문이 흰 채로 남아 눈에 띄지 않는다.
+        // 0.5초 주기이고, 버튼을 누를 때까지 멈추지 않는다("완료·취소 전까지 계속 알린다"는 약속).
+        private static readonly Color[] RainbowColors = new Color[]
+        {
+            Color.FromArgb(255, 213, 74),
+            Color.FromArgb(182, 240, 160),
+            Color.FromArgb(191, 224, 255),
+            Color.FromArgb(255, 196, 236),
+        };
+
+        private void StartEffect(AppSettings st)
+        {
+            _effect = string.IsNullOrEmpty(st.PopupEffect) ? "flash" : st.PopupEffect;
+            if (_effect == "none") return;
+
+            _blink = new Timer();
+            // rainbow 는 색이 네 개라 한 바퀴가 길다. 나머지는 0.5초 주기(켜짐 0.25 + 꺼짐 0.25).
+            _blink.Interval = _effect == "rainbow" ? 500 : 250;
+            _blink.Tick += delegate { TickEffect(); };
+            _blink.Start();
+        }
+
+        private void TickEffect()
+        {
+            if (_chosen) return;
+            _blinkOn = !_blinkOn;
+            Color bg;
+            switch (_effect)
+            {
+                case "pulse":
+                    bg = _blinkOn ? Color.FromArgb(191, 224, 255) : Color.White;
+                    break;
+                case "glow":
+                    bg = _blinkOn ? Color.FromArgb(255, 214, 208) : Color.White;
+                    break;
+                case "rainbow":
+                    _rainbowStep = (_rainbowStep + 1) % RainbowColors.Length;
+                    bg = RainbowColors[_rainbowStep];
+                    break;
+                case "shake":
+                    // 위치를 흔든다. 색은 건드리지 않는다.
+                    Left += _blinkOn ? 3 : -3;
+                    return;
+                default: // flash
+                    bg = _blinkOn ? Color.FromArgb(255, 213, 74) : Color.White;
+                    break;
+            }
+            BackColor = bg;
+            // 제목 줄이 자기 회색을 그대로 들고 있으면 그 부분만 안 바뀌어 어색하다.
+            if (_header != null) _header.BackColor = bg;
+            Invalidate();
+        }
+
+        /// <summary>사용자가 눌렀다. 알림은 제 할 일을 다 했으므로 즉시 조용해진다.</summary>
+        private void StopEffect()
+        {
+            if (_blink != null) { _blink.Stop(); _blink.Dispose(); _blink = null; }
+            BackColor = Color.White;
+            if (_header != null) _header.BackColor = HeaderColor;
+            Invalidate();
+        }
+
+        /// <summary>
+        /// 이 실행 파일이 언제 만들어졌는가(yyyyMMdd_HHmmss). 디버깅 힌트다 —
+        /// ZIP 을 받아 실행했을 때 "업데이트가 반영된 판인가" 를 창만 보고 알 수 있어야 한다.
+        /// </summary>
+        private static string BuildStamp()
+        {
+            try
+            {
+                string exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (!string.IsNullOrEmpty(exe) && System.IO.File.Exists(exe))
+                {
+                    return System.IO.File.GetLastWriteTime(exe).ToString("yyyyMMdd_HHmmss");
+                }
+            }
+            catch { }
+            return "unknown";
         }
 
         private void BuildUi(AppSettings st)
@@ -86,8 +175,10 @@ namespace TodoPopup
             header.Dock = DockStyle.Top;
             header.Height = 26;
             header.BackColor = HeaderColor;
+            _header = header;
 
             Label lblHeader = new Label();
+            // 빌드 시각·런타임 표시는 목록 창 좌상단 배너로 옮겼다(알림 팝업은 좁다).
             lblHeader.Text = "≡  할 일 알림";
             lblHeader.ForeColor = GrayText;
             lblHeader.Font = new Font("맑은 고딕", 8.5F);
@@ -238,6 +329,9 @@ namespace TodoPopup
         {
             if (_chosen) return;
             _chosen = true;
+            // 누른 즉시 효과를 멈춘다. 닫히기까지의 짧은 사이에도 번쩍이면 눌렸는지
+            // 알 수가 없고, 모니터마다 있는 쌍둥이가 차례로 닫힐 때 더 어지럽다.
+            StopEffect();
             Action<PopupForm, TodoItem, PopupAction, int> h = ActionChosen;
             if (h != null) h(this, _todo, action, minutes);
             Close();

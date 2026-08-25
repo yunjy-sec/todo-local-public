@@ -591,6 +591,14 @@ try {
     }
   }
 
+  // 좌상단 런타임 배너. 어느 판이 도는지 창만 보고 알 수 있어야 한다 —
+  // 이게 없어서 ZIP 배포에서 C# 판이 도는 것을 새 판으로 오해한 일이 있었다.
+  const banner = await list.eval(`(document.getElementById('runtimeBar') || {}).textContent || ''`);
+  results.push(['목록: 좌상단에 런타임·빌드 시각이 보인다',
+    typeof banner === 'string' && /런타임: Electron/.test(banner)
+      && /빌드 \d{8}_\d{6}/.test(banner) && /node \d/.test(banner),
+    `배너 "${banner}" — main.js 의 runtimeInfo() 와 list.html 의 #runtimeBar 를 보세요.`]);
+
   // 알림 팝업이 실제로 눈에 띄게 그려지는가.
   //   알림이 떠도 못 보고 지나치면 이 앱은 아무것도 한 것이 없다. 효과는 CSS 라
   //   lint 로는 "설정이 있다" 까지만 알 수 있고, **창이 그것을 실제로 입었는지**는

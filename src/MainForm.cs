@@ -256,10 +256,72 @@ namespace TodoPopup
             Controls.Add(_lv);
             Controls.Add(pnlBottom);
             Controls.Add(_pnlInput);
+            Controls.Add(BuildRuntimeBanner());
             _lv.BringToFront();
 
             LayoutInputRow();
             FitColumns();
+        }
+
+        /// <summary>
+        /// 좌상단 런타임 표시(작은 회색 글씨).
+        ///
+        /// 왜 있는가: ZIP 을 받아 실행했을 때 어느 판이 도는지 알 수가 없었다.
+        /// node_modules 가 없으면 런처가 조용히 C# 판을 빌드해 띄우는데, 사용자는 그것을
+        /// Electron 판으로 알고 "업데이트가 반영 안 됐다" 고 판단하게 된다. 실제로 그랬다.
+        /// 그래서 런타임·빌드시각·node/npm 유무를 창에 그대로 적는다.
+        /// </summary>
+        private Panel BuildRuntimeBanner()
+        {
+            Panel bar = new Panel();
+            bar.Dock = DockStyle.Top;
+            bar.Height = 18;
+            bar.BackColor = Color.FromArgb(248, 249, 251);
+
+            Label lbl = new Label();
+            lbl.AutoSize = true;
+            lbl.Location = new Point(8, 3);
+            lbl.Font = new Font("맑은 고딕", 7.5F);
+            lbl.ForeColor = Color.FromArgb(140, 144, 152);
+            lbl.Text = "런타임: C# (TodoPopup.exe) · 빌드 " + BuildStampOf()
+                + " · node " + ProbeVersion("node") + " · npm " + ProbeVersion("npm");
+            bar.Controls.Add(lbl);
+            return bar;
+        }
+
+        private static string BuildStampOf()
+        {
+            try
+            {
+                string exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                if (!string.IsNullOrEmpty(exe) && System.IO.File.Exists(exe))
+                    return System.IO.File.GetLastWriteTime(exe).ToString("yyyyMMdd_HHmmss");
+            }
+            catch { }
+            return "unknown";
+        }
+
+        /// <summary>node/npm 이 PATH 에 있는가. 없으면 "없음" — 그것이 곧 이 판이 도는 이유다.</summary>
+        private static string ProbeVersion(string exeName)
+        {
+            try
+            {
+                System.Diagnostics.ProcessStartInfo psi =
+                    new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c " + exeName + " -v");
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+                using (System.Diagnostics.Process pr = System.Diagnostics.Process.Start(psi))
+                {
+                    string outp = pr.StandardOutput.ReadToEnd();
+                    pr.WaitForExit(2000);
+                    outp = (outp ?? "").Trim();
+                    if (pr.ExitCode != 0 || outp.Length == 0) return "없음";
+                    return outp.Split(new char[] { '\n', '\r' })[0].Trim();
+                }
+            }
+            catch { return "없음"; }
         }
 
         private void LayoutInputRow()
@@ -376,20 +438,20 @@ namespace TodoPopup
             }
             if (nr.HasTime)
             {
-                when = nr.When;
+                when = TimeUtil.SnapSeconds(nr.When, _ctx.Settings.TruncateSeconds);
                 title = nr.Title;
                 source = "문장에서 인식: " + nr.Matched;
                 return true;
             }
             if (_detailOpen)
             {
-                when = GetDetailTime();
+                when = TimeUtil.SnapSeconds(GetDetailTime(), _ctx.Settings.TruncateSeconds);
                 source = "직접 선택";
                 return true;
             }
             if (_chipFunc != null)
             {
-                when = _chipFunc();
+                when = TimeUtil.SnapSeconds(_chipFunc(), _ctx.Settings.TruncateSeconds);
                 source = "칩: " + _chipLabel;
                 return true;
             }

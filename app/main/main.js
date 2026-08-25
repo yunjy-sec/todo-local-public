@@ -117,6 +117,21 @@ function onReady() {
   }
 }
 
+/** 좌상단 배너에 쓸 런타임 진단. node/npm 은 이 프로세스가 이미 그 위에서 돌고 있다. */
+function runtimeInfo() {
+  const t = storage.fileMTime(path.join(__dirname, 'main.js'));
+  const p2 = n => String(n).padStart(2, '0');
+  const stamp = t
+    ? `${t.getFullYear()}${p2(t.getMonth() + 1)}${p2(t.getDate())}_${p2(t.getHours())}${p2(t.getMinutes())}${p2(t.getSeconds())}`
+    : 'unknown';
+  return {
+    kind: 'Electron',
+    build: stamp,
+    node: process.versions.node,
+    electron: process.versions.electron,
+  };
+}
+
 function destroyTray() {
   if (!tray) return;
   try { tray.destroy(); } catch (e) {}
@@ -221,6 +236,10 @@ function setupIpc() {
     colors: model.COLORS,
     defaultColor: model.DEFAULT_COLOR,
     calendars: store.calendars,
+    // 어느 판이 도는지 창이 스스로 밝힌다(좌상단 배너). ZIP 배포에서 node_modules 가
+    // 없으면 런처가 조용히 C# 판을 띄우는데, 사용자는 그것을 이 판으로 알고
+    // "업데이트가 반영 안 됐다" 고 판단하게 된다 — 실제로 그랬다.
+    runtime: runtimeInfo(),
   }));
 
   handle('get-calendars', () => store.calendars);

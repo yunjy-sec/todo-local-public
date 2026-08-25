@@ -4,6 +4,24 @@ const path = require('path');
 const { BrowserWindow, screen, shell } = require('electron');
 const model = require('./model');
 const { fromRfc3339 } = require('./util');
+const storage = require('./storage');
+
+/**
+ * 이 판이 언제 만들어졌는가(yyyyMMdd_HHmmss). 팝업 제목에 함께 보인다.
+ * ZIP 을 받아 실행했을 때 "업데이트가 반영된 판인가" 를 창만 보고 알 수 있어야 한다 —
+ * 실제로 그것을 몰라 옛 판이 도는 것을 새 판으로 오해했다.
+ */
+function buildStamp() {
+  try {
+    const t = storage.fileMTime(path.join(__dirname, 'main.js'));
+    if (!t) return 'unknown';
+    const p2 = n => String(n).padStart(2, '0');
+    return `${t.getFullYear()}${p2(t.getMonth() + 1)}${p2(t.getDate())}`
+      + `_${p2(t.getHours())}${p2(t.getMinutes())}${p2(t.getSeconds())}`;
+  } catch (e) {
+    return 'unknown';
+  }
+}
 
 // 알림 팝업 창 관리: 빈 슬롯 배정 스택, 포커스 스틸 없음, 투명도 적용
 class PopupManager {

@@ -228,6 +228,11 @@ namespace TodoPopup
         [DataMember(Name = "defaultSnoozeMinutes")] public int DefaultSnoozeMinutes;
         [DataMember(Name = "playSound")] public bool PlaySound;
         [DataMember(Name = "showClosed")] public bool ShowClosed;
+        // Electron 판과 같은 키를 쓴다. 두 판이 %APPDATA%\TodoPopup\settings.json 을
+        // 공유하므로, 키가 갈라지면 한쪽에서 켠 설정이 다른 쪽에서 조용히 무시된다.
+        [DataMember(Name = "truncateSeconds")] public bool TruncateSeconds;
+        [DataMember(Name = "popupAllMonitors")] public bool PopupAllMonitors;
+        [DataMember(Name = "popupEffect")] public string PopupEffect;
 
         public AppSettings()
         {
@@ -248,6 +253,9 @@ namespace TodoPopup
             PopupHeight = 170;
             DefaultRenotifyMinutes = 5;
             DefaultSnoozeMinutes = 10;
+            TruncateSeconds = true;
+            PopupAllMonitors = true;
+            PopupEffect = "flash";
             PlaySound = true;
             ShowClosed = false;
         }
@@ -274,6 +282,18 @@ namespace TodoPopup
 
     public static class TimeUtil
     {
+        /// <summary>
+        /// 예약 시각의 초를 버린다. 14:00:30 에 "1분 뒤" 라고 하면 사람은 14:01 을 뜻하지
+        /// 14:01:30 을 뜻하지 않는다. 초가 남으면 알림이 늘 어중간한 자리에서 울리는데,
+        /// 화면은 초를 보여 주지 않으므로 사용자는 "14:01 이라 써 놓고 왜 늦지" 만 보게 된다.
+        /// Electron 판의 Store.snapSeconds() 와 같은 규칙이다(두 판이 같은 원장을 쓴다).
+        /// </summary>
+        public static DateTime SnapSeconds(DateTime dt, bool enabled)
+        {
+            if (!enabled) return dt;
+            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, dt.Kind);
+        }
+
         public static string ToRfc3339(DateTime dt)
         {
             if (dt.Kind == DateTimeKind.Unspecified) dt = DateTime.SpecifyKind(dt, DateTimeKind.Local);
