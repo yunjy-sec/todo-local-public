@@ -117,7 +117,16 @@ function onReady() {
   }
 }
 
+function destroyTray() {
+  if (!tray) return;
+  try { tray.destroy(); } catch (e) {}
+  tray = null;
+}
+
 function setupTray() {
+  // 이미 있으면 먼저 없앤다. 같은 프로세스에서 두 번 만들면 트레이에 아이콘이 둘 남고,
+  // 옛 것은 아무 데도 연결돼 있지 않아 눌러도 반응이 없다.
+  destroyTray();
   tray = new Tray(path.join(__dirname, '..', 'assets', 'icon-32.png'));
   tray.setToolTip('Todo 팝업 알림');
   const menu = Menu.buildFromTemplate([
@@ -152,7 +161,7 @@ function quitApp() {
   for (const w of BrowserWindow.getAllWindows()) {
     try { w.destroy(); } catch (e) {}
   }
-  if (tray) tray.destroy();
+  destroyTray();
   app.exit(0);
 }
 
@@ -338,4 +347,13 @@ function setupIpc() {
 }
 
 app.on('before-quit', () => { quitting = true; });
+// 트레이 아이콘은 프로세스가 죽어도 윈도우 쪽에 껍데기가 남는다. 그 껍데기는 마우스가
+// 그 위를 지나가야 비로소 사라지므로, 사용자에게는 "todo 아이콘이 잔뜩 쌓인" 것으로 보인다.
+// quitApp() 만으로는 부족하다 — 창을 닫아 끝나는 경로·전원 종료·강제 종료가 그것을 건너뛴다.
+// 나갈 수 있는 모든 문에서 정리한다.
+app.on('will-quit', destroyTray);
+app.on('quit', destroyTray);
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(sig, () => { destroyTray(); app.exit(0); });
+}
 app.on('window-all-closed', (e) => { /* 트레이 상주 - 종료하지 않음 */ });

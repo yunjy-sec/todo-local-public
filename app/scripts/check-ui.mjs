@@ -602,6 +602,9 @@ try {
     const popup = await cdp(popupTarget.webSocketDebuggerUrl);
     await sleep(600);
     popupState = await popup.eval(`({
+      // 효과는 **멈추지 않아야** 한다. 이 앱의 약속은 "완료·취소 전까지 계속 알린다" 이고,
+      // 효과가 먼저 멎으면 팝업은 떠 있는데 눈에 안 띄어 그 약속이 조용히 깨진다.
+      iterations: getComputedStyle(document.body).animationIterationCount,
       effect: document.body.dataset.effect || null,
       title: (document.getElementById('title') || {}).textContent || '',
       reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -619,7 +622,8 @@ try {
     popupState = { error: e.message };
   }
   results.push(['팝업: 기본으로 눈에 띄는 효과가 걸린다',
-    !!popupState && popupState.effect === 'flash' && popupState.animated === true,
+    !!popupState && popupState.effect === 'flash' && popupState.animated === true
+      && popupState.iterations === 'infinite',
     `팝업 상태 ${JSON.stringify(popupState)} — registry 의 popupEffect 기본값과 popup.html 의 ` +
     `body[data-effect] 규칙을 보세요. reduced:true 면 OS 가 "움직임 줄이기" 를 켠 것인데, ` +
     `그때도 효과가 (느리게라도) 살아 있어야 합니다 — 통째로 끄면 알림을 조용히 놓칩니다.`]);
