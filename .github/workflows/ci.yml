@@ -97,3 +97,5 @@ jobs:
         run: |
           "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\NlpTest.exe src\Nlp.cs test\NlpTest.cs
           test\NlpTest.exe
+          "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\SnapTest.exe src\Models.cs test\SnapTest.cs /r:System.Runtime.Serialization.dll /r:System.Xml.dll
+          test\SnapTest.exe
