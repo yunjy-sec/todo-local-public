@@ -96,6 +96,7 @@
     { key: 'hotkeyList', type: 'string', def: 'Control+Alt+T', label: '단축키: 목록', ui: 'text', section: 'app' },
     { key: 'hotkeyNew', type: 'string', def: 'Control+Alt+N', label: '단축키: 새 일정', ui: 'text', section: 'app' },
     { key: 'hotkeyCalendar', type: 'string', def: 'Control+Alt+C', label: '단축키: 캘린더', ui: 'text', section: 'app' },
+    { key: 'hotkeyAck', type: 'string', def: 'Control+Alt+Enter', label: '단축키: 알림 확인', ui: 'text', section: 'app' },
   ];
 
   var SETTINGS_SECTIONS = [
@@ -193,7 +194,8 @@
   var HOTKEYS = [
     { key: 'hotkeyList', def: 'Control+Alt+T', desc: '목록 창 열기' },
     { key: 'hotkeyNew', def: 'Control+Alt+N', desc: '새 일정 입력' },
-    { key: 'hotkeyCalendar', def: 'Control+Alt+C', desc: '캘린더 창 열기' }
+    { key: 'hotkeyCalendar', def: 'Control+Alt+C', desc: '캘린더 창 열기' },
+    { key: 'hotkeyAck', def: 'Control+Alt+Enter', desc: '뜬 알림을 먼저 뜬 순서대로 확인 처리' }
   ];
 
   var CLI_FLAGS = [

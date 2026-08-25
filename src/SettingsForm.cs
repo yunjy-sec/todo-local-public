@@ -29,6 +29,9 @@ namespace TodoPopup
         private NumericUpDown _numSnooze;
         private CheckBox _chkSound;
         private CheckBox _chkAutostart;
+        private HotkeyBox _hkList;
+        private HotkeyBox _hkNew;
+        private HotkeyBox _hkAck;
 
         public SettingsForm(TrayContext ctx)
         {
@@ -41,7 +44,7 @@ namespace TodoPopup
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(400, 356);
+            ClientSize = new Size(430, 500);
             StartPosition = FormStartPosition.CenterScreen;
 
             AppSettings s = _ctx.Settings;
@@ -112,6 +115,33 @@ namespace TodoPopup
             _chkAutostart.Checked = IsAutostartEnabled();
             _chkAutostart.AutoSize = true;
             AddRow("시작", _chkAutostart, ref y);
+
+            y += 6;
+            Label lblHk = new Label();
+            lblHk.Text = "전역 단축키 — 창이 트레이에 숨어 있어도 먹습니다";
+            lblHk.ForeColor = GrayText;
+            lblHk.Location = new Point(16, y);
+            lblHk.AutoSize = true;
+            Controls.Add(lblHk);
+            y += 22;
+
+            _hkList = new HotkeyBox(s.HotkeyList);
+            AddRow("목록 열기", _hkList, ref y);
+
+            _hkNew = new HotkeyBox(s.HotkeyNew);
+            AddRow("새 일정", _hkNew, ref y);
+
+            _hkAck = new HotkeyBox(s.HotkeyAck);
+            AddRow("알림 확인", _hkAck, ref y);
+
+            Label lblHkHint = new Label();
+            lblHkHint.Text = "칸을 누르고 원하는 조합을 누르세요. Backspace = 끄기.\n"
+                + "알림 확인은 가장 먼저 뜬 알림부터 하나씩 처리합니다.";
+            lblHkHint.ForeColor = GrayText;
+            lblHkHint.Location = new Point(16, y);
+            lblHkHint.AutoSize = true;
+            Controls.Add(lblHkHint);
+            y += 34;
 
             Button btnPreview = new Button();
             btnPreview.Text = "미리보기";
@@ -185,9 +215,16 @@ namespace TodoPopup
             y += control.Height > 30 ? control.Height + 8 : 36;
         }
 
+        /// <summary>
+        /// 이 창이 **소유한 것만** 바꾸고 나머지는 지금 값을 그대로 들고 간다.
+        ///
+        /// 전에는 new AppSettings() 로 시작해 아는 필드 여덟 개만 채웠다. 그래서 설정 창을
+        /// 열고 저장하기만 해도 초 버림·모든 모니터·시각 효과가 조용히 기본값으로 돌아갔다 —
+        /// 사용자는 자기가 끈 것이 왜 다시 켜졌는지 알 수 없었다.
+        /// </summary>
         private AppSettings Collect()
         {
-            AppSettings s = new AppSettings();
+            AppSettings s = _ctx.Settings.CopyForEdit();
             int idx = _cbPosition.SelectedIndex;
             s.Position = (idx >= 0 && idx < PositionCodes.Length) ? PositionCodes[idx] : "bottom-center";
             s.Opacity = _tbOpacity.Value / 100.0;
@@ -196,7 +233,9 @@ namespace TodoPopup
             s.DefaultRenotifyMinutes = (int)_numRenotify.Value;
             s.DefaultSnoozeMinutes = (int)_numSnooze.Value;
             s.PlaySound = _chkSound.Checked;
-            s.ShowClosed = _ctx.Settings.ShowClosed;
+            s.HotkeyList = _hkList.Spec;
+            s.HotkeyNew = _hkNew.Spec;
+            s.HotkeyAck = _hkAck.Spec;
             s.Clamp();
             return s;
         }

@@ -61,11 +61,19 @@ namespace TodoPopup
             RefreshList();
         }
 
+        private const int WM_HOTKEY = 0x0312;
+
         protected override void WndProc(ref Message m)
         {
             if (Program.ShowMeMessage != 0 && m.Msg == Program.ShowMeMessage)
             {
                 ShowMain();
+            }
+            else if (m.Msg == WM_HOTKEY)
+            {
+                // 전역 단축키. 이 창은 트레이에 숨어 있어도 핸들이 살아 있어서
+                // (TrayContext 생성자가 Handle 을 강제로 만든다) 받을 수 있다.
+                _ctx.OnHotkey(m.WParam.ToInt32());
             }
             else if (Program.ExitPleaseMessage != 0 && m.Msg == Program.ExitPleaseMessage)
             {
@@ -194,9 +202,23 @@ namespace TodoPopup
             _lv.Columns.Add("재알림", 64);
             _lv.Columns.Add("상태", 90);
             _lv.Resize += delegate { FitColumns(); };
-            _lv.DoubleClick += delegate { MarkSelected(TodoStatus.Done); };
+            // 더블클릭은 **편집**이다. 전에는 완료 처리였는데, 목록에서 항목을 두 번 누르는
+            // 흔한 동작에 되돌리기 어려운 일을 매달아 두면 실수가 난다. 완료는 메뉴에 있다.
+            _lv.DoubleClick += delegate { EditSelected(); };
+            _lv.KeyDown += delegate(object s2, KeyEventArgs e2)
+            {
+                // F2 는 윈도우에서 "이름 바꾸기" 다. Enter 도 같은 자리에 둔다.
+                if (e2.KeyCode == Keys.F2 || e2.KeyCode == Keys.Enter)
+                {
+                    e2.Handled = true;
+                    EditSelected();
+                }
+            };
 
             ContextMenuStrip cm = new ContextMenuStrip();
+            ToolStripMenuItem miEdit = new ToolStripMenuItem("편집…");
+            miEdit.ShortcutKeyDisplayString = "F2";
+            miEdit.Click += delegate { EditSelected(); };
             ToolStripMenuItem miNotify = new ToolStripMenuItem("지금 알림");
             miNotify.Click += delegate
             {
@@ -209,6 +231,8 @@ namespace TodoPopup
             miCancel.Click += delegate { MarkSelected(TodoStatus.Cancelled); };
             ToolStripMenuItem miDelete = new ToolStripMenuItem("삭제");
             miDelete.Click += delegate { DeleteSelected(); };
+            cm.Items.Add(miEdit);
+            cm.Items.Add(new ToolStripSeparator());
             cm.Items.Add(miNotify);
             cm.Items.Add(miDone);
             cm.Items.Add(miCancel);
@@ -218,6 +242,7 @@ namespace TodoPopup
             {
                 TodoItem t = SelectedTodo();
                 bool pending = t != null && t.IsPending();
+                miEdit.Enabled = t != null;
                 miNotify.Enabled = pending;
                 miDone.Enabled = pending;
                 miCancel.Enabled = pending;
@@ -290,7 +315,7 @@ namespace TodoPopup
             lbl.Size = new Size(560, 14);
 
             // 런타임과 빌드 시각은 지금 당장 안다 — 이것만으로 "어느 판이 도는가" 는 답이 된다.
-            string head = "런타임: C# (TodoPopup.exe) · 빌드 " + BuildStampOf();
+            string head = "런타임: C# (TodoPopup.exe) · " + BuildInfo.Text;
             lbl.Text = head + " · node … · npm …";
             bar.Controls.Add(lbl);
 
@@ -314,6 +339,18 @@ namespace TodoPopup
                 catch { } // 창이 그 사이에 닫혔다 — 진단 문구 하나 못 채운 것뿐이다
             });
             return bar;
+        }
+
+        /// <summary>
+        /// Ctrl+Alt+N 이 노리는 흐름 — 창을 앞으로 세우고, 입력칸을 비우고, 커서를 거기 둔다.
+        /// 사용자가 원하는 것은 "키 → 타이핑 → Enter" 이고 그 사이에 마우스가 끼면 안 된다.
+        /// </summary>
+        public void ShowForNewTodo()
+        {
+            ShowMain();
+            if (_txtInput == null || _txtInput.IsDisposed) return;
+            _txtInput.Clear();
+            _txtInput.Focus();
         }
 
         private static string BuildStampOf()
@@ -550,6 +587,19 @@ namespace TodoPopup
         {
             if (_lv.SelectedItems.Count == 0) return null;
             return _lv.SelectedItems[0].Tag as TodoItem;
+        }
+
+        /// <summary>고른 일정을 편집 창으로 연다.</summary>
+        private void EditSelected()
+        {
+            TodoItem t = SelectedTodo();
+            if (t == null) return;
+            using (EditForm f = new EditForm(t, _ctx.Settings))
+            {
+                f.ShowDialog(this);
+                if (!f.Saved) return;
+                _ctx.UpdateTodo(t, f.ResultTitle, f.ResultDue, f.ResultRenotify);
+            }
         }
 
         private void MarkSelected(string status)

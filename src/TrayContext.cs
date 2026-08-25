@@ -14,6 +14,14 @@ namespace TodoPopup
         private MainForm _mainForm;
         private SettingsForm _settingsForm;
         private readonly Dictionary<string, PopupForm> _popups = new Dictionary<string, PopupForm>();
+        /// <summary>알림이 뜬 순서. Dictionary 는 열거 순서를 약속하지 않으므로 따로 센다 —
+        /// "첫 번째 알림부터 순차적으로" 라는 약속이 그 위에 서 있다.</summary>
+        private readonly List<string> _popupOrder = new List<string>();
+
+        /// <summary>단축키 번호. WM_HOTKEY 의 wParam 으로 돌아온다.</summary>
+        public const int HotkeyList = 1;
+        public const int HotkeyNew = 2;
+        public const int HotkeyAck = 3;
         private List<TodoItem> _todos;
         private AppSettings _settings;
         private Icon _icon;
@@ -40,12 +48,14 @@ namespace TodoPopup
             _tray.DoubleClick += delegate { ShowMain(); };
 
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Items.Add("새 일정 추가", null, delegate { ShowMain(); });
+            menu.Items.Add("새 일정 추가", null, delegate { ShowNewTodo(); });
             menu.Items.Add("목록 열기", null, delegate { ShowMain(); });
             menu.Items.Add("설정", null, delegate { OpenSettings(); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("종료", null, delegate { ExitApp(); });
             _tray.ContextMenuStrip = menu;
+
+            RegisterHotkeys();
 
             _timer = new Timer();
             _timer.Interval = 5000;
@@ -130,11 +140,13 @@ namespace TodoPopup
                 if (_popups.TryGetValue(id, out cur) && cur == firstOfGroup)
                 {
                     _popups.Remove(id);
+                    _popupOrder.Remove(id);
                     RaiseChanged(); // 목록의 '알림중' 상태 즉시 갱신
                 }
             };
 
             _popups[id] = first;
+            if (!_popupOrder.Contains(id)) _popupOrder.Add(id);
             foreach (PopupForm pf in twins) pf.Show();
             // DPI 자동 스케일로 실제 크기가 바뀔 수 있으므로 표시 후 위치를 재보정
             for (int i = 0; i < twins.Count; i++)
@@ -219,6 +231,31 @@ namespace TodoPopup
             Tick();
         }
 
+        /// <summary>
+        /// 일정 하나를 고친다. 새로 만들어 갈아 끼우지 않고 **같은 항목을 고친다** —
+        /// id 가 유지되어야 알림 횟수·구글 왕복·툼스톤이 이어진다.
+        ///
+        /// 예정 시각을 바꿨으면 미루기를 지운다. 안 지우면 "10분 뒤로 미뤄 둔" 상태가
+        /// 새 시각 위에 남아 사용자가 옮겨 놓은 시각에 알림이 안 뜬다.
+        /// </summary>
+        public void UpdateTodo(TodoItem t, string title, DateTime due, int renotifyMinutes)
+        {
+            if (t == null) return;
+            DateTime before = t.GetDue();
+            t.Title = title;
+            t.SetDue(TimeUtil.SnapSeconds(due, _settings.TruncateSeconds));
+            t.RenotifyMinutes = renotifyMinutes;
+            if (before != t.GetDue()) t.ClearSnooze();
+            t.Touch();
+
+            // 시각이나 제목이 바뀌었는데 옛 내용의 팝업이 떠 있으면 그것은 이미 거짓말이다.
+            CloseIfOpen(t.Id);
+
+            Storage.SaveTodos(_todos);
+            RaiseChanged();
+            Tick(); // 지난 시각으로 옮겼으면 지금 울려야 한다
+        }
+
         public void SetTodoStatus(TodoItem t, string status)
         {
             t.Status = status;
@@ -259,6 +296,7 @@ namespace TodoPopup
             if (_popups.TryGetValue(id, out pf))
             {
                 _popups.Remove(id);
+                _popupOrder.Remove(id);
                 try { pf.Close(); }
                 catch { }
             }
@@ -269,6 +307,7 @@ namespace TodoPopup
             s.Clamp();
             _settings = s;
             Storage.SaveSettings(s);
+            RegisterHotkeys(); // 단축키가 바뀌었을 수 있다 — 다시 걸어야 실제로 바뀐다
             Action h = SettingsChanged;
             if (h != null) h();
         }
@@ -306,6 +345,91 @@ namespace TodoPopup
             _settingsForm.Show();
         }
 
+        // ---- 전역 단축키 ----
+
+        /// <summary>
+        /// 설정에 적힌 조합으로 단축키를 (다시) 건다.
+        ///
+        /// 왜 트레이 앱에 필요한가: 사용자가 원하는 흐름은 "Ctrl+Alt+N → 입력 → Enter" 하나다.
+        /// 창이 숨어 있을 때도 키를 받으려면 RegisterHotKey 뿐이다.
+        ///
+        /// 실패를 조용히 삼키지 않는다. 다른 앱이 그 조합을 이미 쥐고 있으면 사용자는
+        /// "단축키가 안 먹는다" 만 알게 되고 이유는 영영 모른다.
+        /// </summary>
+        private void RegisterHotkeys()
+        {
+            if (_mainForm == null || _mainForm.IsDisposed) return;
+            IntPtr h = _mainForm.Handle;
+
+            Hotkeys.Unregister(h, HotkeyList);
+            Hotkeys.Unregister(h, HotkeyNew);
+            Hotkeys.Unregister(h, HotkeyAck);
+
+            List<string> failed = new List<string>();
+            Add(failed, Hotkeys.Register(h, HotkeyList, _settings.HotkeyList), "목록 열기");
+            Add(failed, Hotkeys.Register(h, HotkeyNew, _settings.HotkeyNew), "새 일정");
+            Add(failed, Hotkeys.Register(h, HotkeyAck, _settings.HotkeyAck), "알림 확인");
+
+            if (failed.Count > 0 && _tray != null)
+            {
+                try
+                {
+                    _tray.BalloonTipTitle = "단축키를 걸지 못했습니다";
+                    _tray.BalloonTipText = string.Join("\n", failed.ToArray())
+                        + "\n설정에서 다른 조합으로 바꾸세요.";
+                    _tray.ShowBalloonTip(6000);
+                }
+                catch { }
+            }
+        }
+
+        private static void Add(List<string> failed, Hotkeys.Result r, string what)
+        {
+            if (r == null || r.Ok) return;
+            failed.Add(what + " (" + Hotkeys.Display(r.Spec) + ") — " + r.Why);
+        }
+
+        /// <summary>WM_HOTKEY 가 왔다. MainForm.WndProc 가 넘겨 준다.</summary>
+        public void OnHotkey(int id)
+        {
+            if (id == HotkeyList) ShowMain();
+            else if (id == HotkeyNew) ShowNewTodo();
+            else if (id == HotkeyAck) AckFirstPopup();
+        }
+
+        /// <summary>창을 세우고 입력칸을 비우고 커서를 거기 둔다 — 키 하나로 타이핑까지.</summary>
+        public void ShowNewTodo()
+        {
+            if (_mainForm == null || _mainForm.IsDisposed) return;
+            _mainForm.ShowForNewTodo();
+        }
+
+        /// <summary>
+        /// 열려 있는 알림 중 **가장 먼저 뜬 것**을 확인 처리한다. 여러 개가 떠 있으면
+        /// 누를 때마다 그다음 것으로 간다 — 키를 연타해 순서대로 치울 수 있다.
+        /// 확인(Ack)이지 완료가 아니다: 재알림 간격 뒤 다시 뜬다.
+        /// </summary>
+        public bool AckFirstPopup()
+        {
+            while (_popupOrder.Count > 0)
+            {
+                string id = _popupOrder[0];
+                PopupForm pf;
+                if (!_popups.TryGetValue(id, out pf) || pf == null || pf.IsDisposed)
+                {
+                    _popupOrder.RemoveAt(0); // 이미 닫힌 흔적 — 걷어내고 다음으로
+                    _popups.Remove(id);
+                    continue;
+                }
+                pf.AckFromHotkey();
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>시험용: 지금 열려 있는 알림의 순서.</summary>
+        public IList<string> OpenPopupOrder { get { return _popupOrder; } }
+
         /// <summary>다른 복사본이 자리를 이어받는다. 트레이 아이콘까지 확실히 걷고 나간다.</summary>
         public void ExitForHandover()
         {
@@ -323,6 +447,13 @@ namespace TodoPopup
 
         private void ExitApp()
         {
+            if (_mainForm != null && !_mainForm.IsDisposed)
+            {
+                IntPtr h = _mainForm.Handle;
+                Hotkeys.Unregister(h, HotkeyList);
+                Hotkeys.Unregister(h, HotkeyNew);
+                Hotkeys.Unregister(h, HotkeyAck);
+            }
             _timer.Stop();
             _tray.Visible = false;
             _tray.Dispose();

@@ -74,6 +74,9 @@ namespace TodoPopup
                 s.TruncateSeconds = Json.GetBool(p, "truncateSeconds", s.TruncateSeconds);
                 s.PopupAllMonitors = Json.GetBool(p, "popupAllMonitors", s.PopupAllMonitors);
                 s.PopupEffect = Json.GetString(p, "popupEffect", s.PopupEffect);
+                s.HotkeyList = Json.GetString(p, "hotkeyList", s.HotkeyList);
+                s.HotkeyNew = Json.GetString(p, "hotkeyNew", s.HotkeyNew);
+                s.HotkeyAck = Json.GetString(p, "hotkeyAck", s.HotkeyAck);
             }
             s.Clamp();
             return s;
@@ -94,6 +97,9 @@ namespace TodoPopup
             up.Add(new KeyValuePair<string, string>("truncateSeconds", Json.Bool(s.TruncateSeconds)));
             up.Add(new KeyValuePair<string, string>("popupAllMonitors", Json.Bool(s.PopupAllMonitors)));
             up.Add(new KeyValuePair<string, string>("popupEffect", Json.Quote(s.PopupEffect)));
+            up.Add(new KeyValuePair<string, string>("hotkeyList", Json.Quote(s.HotkeyList)));
+            up.Add(new KeyValuePair<string, string>("hotkeyNew", Json.Quote(s.HotkeyNew)));
+            up.Add(new KeyValuePair<string, string>("hotkeyAck", Json.Quote(s.HotkeyAck)));
 
             string original = ReadTextOrNull(SettingsPath);
             WriteTextAtomic(SettingsPath, Json.Merge(original == null ? "{}" : original, up));

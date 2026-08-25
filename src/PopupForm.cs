@@ -343,6 +343,17 @@ namespace TodoPopup
             Close();
         }
 
+        /// <summary>
+        /// 전역 단축키로 확인 처리한다. 팝업은 ShowWithoutActivation 이라 포커스를 갖지
+        /// 않으므로, 창 안의 Esc 로는 마우스로 한 번 눌러 준 뒤에만 닿는다. 그 한 번을
+        /// 없애는 것이 이 경로의 존재 이유다.
+        /// </summary>
+        public void AckFromHotkey()
+        {
+            if (IsDisposed) return;
+            Choose(PopupAction.Ack, 0);
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)

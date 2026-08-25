@@ -157,6 +157,7 @@
       <div class="f"><label>단축키: 목록</label><input id="sHkList" type="text" placeholder="Control+Alt+T"></div>
       <div class="f"><label>단축키: 새 일정</label><input id="sHkNew" type="text" placeholder="Control+Alt+N"></div>
       <div class="f"><label>단축키: 캘린더</label><input id="sHkCal" type="text" placeholder="Control+Alt+C"></div>
+      <div class="f"><label>단축키: 알림 확인</label><input id="sHkAck" type="text" placeholder="Control+Alt+Enter"></div>
       <div class="actions">
         <button id="sPreview">팝업 미리보기</button>
         <span class="grow"></span>
@@ -507,6 +508,7 @@
     $('sHkList').value = s.hotkeyList;
     $('sHkNew').value = s.hotkeyNew;
     $('sHkCal').value = s.hotkeyCalendar;
+    $('sHkAck').value = s.hotkeyAck;
     $('sTimeFormat').value = s.timeFormat;
     $('sTimePad').checked = s.timePadHour;
     $('settingsOverlay').style.display = 'block';
@@ -533,6 +535,7 @@
       hotkeyList: $('sHkList').value.trim(),
       hotkeyNew: $('sHkNew').value.trim(),
       hotkeyCalendar: $('sHkCal').value.trim(),
+      hotkeyAck: $('sHkAck').value.trim(),
       showClosed: $('chkClosed').checked,
       defaultCalendarId: $('sDefCal').value || 'default',
       timeFormat: $('sTimeFormat').value,

@@ -105,3 +105,5 @@ jobs:
           test\PopupGroupTest.exe
           "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\InstanceTest.exe src\Json.cs src\InstanceInfo.cs src\InstanceDecision.cs test\InstanceTest.cs /r:System.Runtime.Serialization.dll /r:System.Xml.dll
           test\InstanceTest.exe
+          "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\HotkeyTest.exe src\Hotkeys.cs src\BuildInfo.cs test\HotkeyTest.cs /r:System.Windows.Forms.dll /r:System.Drawing.dll
+          test\HotkeyTest.exe

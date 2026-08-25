@@ -235,10 +235,40 @@ namespace TodoPopup
         [DataMember(Name = "truncateSeconds")] public bool TruncateSeconds;
         [DataMember(Name = "popupAllMonitors")] public bool PopupAllMonitors;
         [DataMember(Name = "popupEffect")] public string PopupEffect;
+        // 전역 단축키. Electron 판과 **같은 키·같은 문자열 형식**을 쓴다("Control+Alt+N") —
+        // settings.json 을 공유하므로 형식이 갈라지면 한쪽에서 정한 키가 다른 쪽에서
+        // 조용히 무시된다.
+        [DataMember(Name = "hotkeyList")] public string HotkeyList;
+        [DataMember(Name = "hotkeyNew")] public string HotkeyNew;
+        [DataMember(Name = "hotkeyAck")] public string HotkeyAck;
 
         public AppSettings()
         {
             SetDefaults();
+        }
+
+        /// <summary>
+        /// 설정 화면이 고칠 사본. **모든 필드를 옮긴다** — 새 필드를 여기 빠뜨리면
+        /// 설정 창을 열고 저장하기만 해도 그 값이 기본값으로 돌아간다(실제로 그랬다).
+        /// </summary>
+        public AppSettings CopyForEdit()
+        {
+            AppSettings c = new AppSettings();
+            c.Opacity = Opacity;
+            c.Position = Position;
+            c.PopupWidth = PopupWidth;
+            c.PopupHeight = PopupHeight;
+            c.DefaultRenotifyMinutes = DefaultRenotifyMinutes;
+            c.DefaultSnoozeMinutes = DefaultSnoozeMinutes;
+            c.PlaySound = PlaySound;
+            c.ShowClosed = ShowClosed;
+            c.TruncateSeconds = TruncateSeconds;
+            c.PopupAllMonitors = PopupAllMonitors;
+            c.PopupEffect = PopupEffect;
+            c.HotkeyList = HotkeyList;
+            c.HotkeyNew = HotkeyNew;
+            c.HotkeyAck = HotkeyAck;
+            return c;
         }
 
         [OnDeserializing]
@@ -258,6 +288,9 @@ namespace TodoPopup
             TruncateSeconds = true;
             PopupAllMonitors = true;
             PopupEffect = "flash";
+            HotkeyList = "Control+Alt+T";
+            HotkeyNew = "Control+Alt+N";
+            HotkeyAck = "Control+Alt+Enter";
             PlaySound = true;
             ShowClosed = false;
         }
