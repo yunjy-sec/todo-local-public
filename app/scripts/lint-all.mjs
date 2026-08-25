@@ -28,6 +28,7 @@ const CHECKS = [
   ['lint:boundary', 'lint-boundary.mjs', 'main/renderer 경계와 preload 관문을 지키는가'],
   ['lint:hardcoding', 'lint-hardcoding.mjs', '채널명·파일명·설정키가 등록표 밖에 박혀 있지 않은가'],
   ['lint:csharp5', 'lint-csharp5.mjs', 'C# 소스가 내장 컴파일러(C# 5) 문법을 벗어나지 않는가'],
+  ['lint:selectable', 'lint-selectable.mjs', '화면 글자가 드래그·복사 가능하고 배경을 부모에서 가져오는가'],
   ['lint:ci', 'lint-ci.mjs', 'CI 필수 단계와 검사 목록이 어긋나지 않았는가'],
   ['lint:docs', 'lint-docs.mjs', '문서가 코드에 없는 명령·심볼을 말하지 않는가'],
 ];

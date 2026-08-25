@@ -225,6 +225,7 @@
       { npm: 'lint:boundary', file: 'scripts/lint-boundary.mjs', why: 'main/renderer 경계와 preload 관문을 지키는가' },
       { npm: 'lint:hardcoding', file: 'scripts/lint-hardcoding.mjs', why: '채널명·파일명·설정키가 등록표 밖에 박혀 있지 않은가' },
       { npm: 'lint:csharp5', file: 'scripts/lint-csharp5.mjs', why: 'C# 소스가 내장 컴파일러(C# 5) 문법을 벗어나지 않는가' },
+      { npm: 'lint:selectable', file: 'scripts/lint-selectable.mjs', why: '화면 글자가 드래그·복사 가능하고 배경을 부모에서 가져오는가' },
       { npm: 'lint:ci', file: 'scripts/lint-ci.mjs', why: 'CI 필수 단계와 이 표가 어긋나지 않았는가' },
       { npm: 'lint:docs', file: 'scripts/lint-docs.mjs', why: '문서가 코드에 없는 명령·심볼을 말하지 않는가' },
       { npm: 'test', file: 'test/*.test.js', why: '파서·반복 전개·상태 변경·저장이 실제로 맞게 도는가' },

@@ -1,4 +1,6 @@
 using System;
+using System.Drawing;
+using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.Serialization;
@@ -280,6 +282,33 @@ namespace TodoPopup
         }
     }
 
+    /// <summary>
+    /// 읽기 전용이지만 **드래그로 블록 지정해 복사할 수 있는** 글자.
+    ///
+    /// Label 은 글자를 선택할 수 없다. 알림에 뜬 일정 제목이나 시각을 다른 곳에
+    /// 옮겨 적으려면 손으로 다시 타이핑해야 했다 — 그래서 TextBox 로 바꾼다.
+    /// 테두리를 없애고 배경을 부모와 맞추면 눈에는 Label 과 똑같이 보인다.
+    /// TabStop 을 끄는 이유: 팝업은 포커스를 뺏지 않는 창이라(ShowWithoutActivation)
+    /// Tab 순회에 끼어들면 버튼으로 가야 할 포커스가 글자에 걸린다.
+    /// </summary>
+    public static class SelectableText
+    {
+        public static TextBox Make(Font font, Color fore, Color back, bool multiline)
+        {
+            TextBox t = new TextBox();
+            t.ReadOnly = true;
+            t.BorderStyle = BorderStyle.None;
+            t.TabStop = false;
+            t.Multiline = multiline;
+            t.WordWrap = multiline;
+            t.ScrollBars = ScrollBars.None;
+            t.Cursor = Cursors.IBeam;
+            if (font != null) t.Font = font;
+            t.ForeColor = fore;
+            t.BackColor = back;
+            return t;
+        }
+    }
     public static class TimeUtil
     {
         /// <summary>

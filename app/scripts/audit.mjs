@@ -173,7 +173,9 @@ function vendorReport() {
 const steps = [
   ['문법', [join(APP, 'scripts', 'check-syntax.mjs')]],
   ['가드레일', [join(APP, 'scripts', 'lint-all.mjs')]],
-  ['단위·회귀', ['--test', join(APP, 'test')]],
+  // 글로브다. 디렉터리를 주면 Node 24 는 그것을 모듈로 읽으려다 죽는다
+  // (Cannot find module …\app\test) — 감사 판정이 통째로 FAIL 로 나왔다.
+  ['단위·회귀', ['--test', 'test/*.test.js']],
 ];
 for (const [label, args] of steps) {
   process.stdout.write(`[4] ${label.padEnd(8)} … `);
@@ -182,15 +184,12 @@ for (const [label, args] of steps) {
       cwd: APP, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
       env: Object.assign({}, process.env, { ELECTRON_RUN_AS_NODE: '1' }),
     });
-    const last = out.trim().split('
-').filter(l => l.trim()).pop() || '';
+    const last = out.trim().split('\n').filter(l => l.trim()).pop() || '';
     console.log('OK  ' + last.trim().slice(0, 90));
   } catch (e) {
     failed = true;
     console.log('FAIL');
-    console.log(((e.stdout || '') + (e.stderr || '')).split('
-').slice(-12).join('
-'));
+    console.log(((e.stdout || '') + (e.stderr || '')).split('\n').slice(-12).join('\n'));
   }
 }
 console.log('[5] 창 스모크   npm run check:ui — 실제 창을 띄웁니다(별도로 실행하세요)');

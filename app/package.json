@@ -17,6 +17,7 @@
     "lint:boundary": "node scripts/lint-boundary.mjs",
     "lint:hardcoding": "node scripts/lint-hardcoding.mjs",
     "lint:csharp5": "node scripts/lint-csharp5.mjs",
+    "lint:selectable": "node scripts/lint-selectable.mjs",
     "lint:ci": "node scripts/lint-ci.mjs",
     "lint:docs": "node scripts/lint-docs.mjs",
     "test": "node --test \"test/*.test.js\"",

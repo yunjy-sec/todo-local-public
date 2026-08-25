@@ -18,8 +18,11 @@ const files = [
   ...collect(join(APP_DIR, 'shared'), ['.js']),
   ...collect(join(APP_DIR, 'test'), ['.js']),
   ...collect(join(APP_DIR, 'scripts'), ['.mjs']),
+  // tools/ 도 트리에서 파생한다. 전에는 sync-server.mjs 하나만 손으로 적었고,
+  // 그래서 tools/cut/assets/audit.mjs 가 깨진 채(문자열 리터럴 안에 진짜 줄바꿈)
+  // 커밋되어 생성물 트리로 그대로 실려 나갔다 — 생성된 쪽에서야 발견됐다.
+  ...collect(join(APP_DIR, '..', 'tools'), ['.mjs', '.js', '.cjs']),
   join(APP_DIR, 'preload.js'),
-  join(APP_DIR, '..', 'tools', 'sync-server.mjs'),
 ].filter(f => existsSync(f));
 
 const problems = [];

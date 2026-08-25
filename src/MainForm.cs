@@ -19,7 +19,7 @@ namespace TodoPopup
 
         private Panel _pnlInput;
         private TextBox _txtInput;
-        private Label _lblPreview;
+        private TextBox _lblPreview;
         private FlowLayoutPanel _chips;
         private Panel _pnlDetail;
         private DateTimePicker _dtpDate;
@@ -30,7 +30,7 @@ namespace TodoPopup
         private Button _btnAdd;
         private ListView _lv;
         private CheckBox _chkShowClosed;
-        private Label _lblStats;
+        private TextBox _lblStats;
         private Button _btnSettings;
 
         private Button _selectedChip;
@@ -85,12 +85,10 @@ namespace TodoPopup
             _txtInput.TextChanged += delegate { UpdatePreview(); };
             _txtInput.KeyDown += OnInputKeyDown;
 
-            _lblPreview = new Label();
+            _lblPreview = SelectableText.Make(null, GrayText, _pnlInput.BackColor, false);
             _lblPreview.Location = new Point(16, 44);
             _lblPreview.Size = new Size(ClientSize.Width - 32, 18);
             _lblPreview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _lblPreview.ForeColor = GrayText;
-            _lblPreview.AutoEllipsis = true;
             _lblPreview.Text = "예: \"내일 오후 3시 회의\", \"30분 뒤 스트레칭\" — 시간 표현을 자동 인식합니다";
 
             _chips = new FlowLayoutPanel();
@@ -237,10 +235,11 @@ namespace TodoPopup
             };
             pnlBottom.Controls.Add(_chkShowClosed);
 
-            _lblStats = new Label();
-            _lblStats.ForeColor = GrayText;
+            // 배경은 반드시 부모 막대에서 가져온다. 흰색을 손으로 적었더니
+            // 회색 막대 위에 흰 상자가 떠 보였다(캡처로 확인).
+            _lblStats = SelectableText.Make(null, GrayText, pnlBottom.BackColor, false);
             _lblStats.Location = new Point(140, 11);
-            _lblStats.AutoSize = true;
+            _lblStats.Size = new Size(320, 18);
             pnlBottom.Controls.Add(_lblStats);
 
             _btnSettings = new Button();
@@ -278,11 +277,10 @@ namespace TodoPopup
             bar.Height = 18;
             bar.BackColor = Color.FromArgb(248, 249, 251);
 
-            Label lbl = new Label();
-            lbl.AutoSize = true;
-            lbl.Location = new Point(8, 3);
-            lbl.Font = new Font("맑은 고딕", 7.5F);
-            lbl.ForeColor = Color.FromArgb(140, 144, 152);
+            TextBox lbl = SelectableText.Make(new Font("맑은 고딕", 7.5F),
+                Color.FromArgb(140, 144, 152), bar.BackColor, false);
+            lbl.Location = new Point(8, 2);
+            lbl.Size = new Size(560, 14);
             lbl.Text = "런타임: C# (TodoPopup.exe) · 빌드 " + BuildStampOf()
                 + " · node " + ProbeVersion("node") + " · npm " + ProbeVersion("npm");
             bar.Controls.Add(lbl);

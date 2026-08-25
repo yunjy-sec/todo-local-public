@@ -25,9 +25,9 @@ namespace TodoPopup
 
         private readonly TodoItem _todo;
         private readonly bool _isPreview;
-        private Label _lblTitle;
-        private Label _lblInfo;
-        private Label _lblNote;
+        private TextBox _lblTitle;
+        private TextBox _lblInfo;
+        private TextBox _lblNote;
         private Button _btnSnooze;
         private Timer _refresh;
         private bool _chosen;
@@ -136,18 +136,29 @@ namespace TodoPopup
                     bg = _blinkOn ? Color.FromArgb(255, 213, 74) : Color.White;
                     break;
             }
-            BackColor = bg;
-            // 제목 줄이 자기 회색을 그대로 들고 있으면 그 부분만 안 바뀌어 어색하다.
-            if (_header != null) _header.BackColor = bg;
+            ApplyBackground(bg, bg);
             Invalidate();
+        }
+
+        /// <summary>
+        /// 창 배경을 바꾼다. **글자 영역(TextBox)도 함께** 바꿔야 한다 —
+        /// 선택 가능하게 하려고 Label 을 TextBox 로 바꿨는데, TextBox 는 자기 BackColor 를
+        /// 들고 있어서 창만 물들이면 글자 자리만 흰 상자로 남는다(실제로 그렇게 보였다).
+        /// </summary>
+        private void ApplyBackground(Color body, Color header)
+        {
+            BackColor = body;
+            if (_header != null) _header.BackColor = header;
+            if (_lblTitle != null) _lblTitle.BackColor = body;
+            if (_lblInfo != null) _lblInfo.BackColor = body;
+            if (_lblNote != null) _lblNote.BackColor = body;
         }
 
         /// <summary>사용자가 눌렀다. 알림은 제 할 일을 다 했으므로 즉시 조용해진다.</summary>
         private void StopEffect()
         {
             if (_blink != null) { _blink.Stop(); _blink.Dispose(); _blink = null; }
-            BackColor = Color.White;
-            if (_header != null) _header.BackColor = HeaderColor;
+            ApplyBackground(Color.White, HeaderColor);
             Invalidate();
         }
 
@@ -195,23 +206,18 @@ namespace TodoPopup
             lblDragHint.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             header.Controls.Add(lblDragHint);
 
-            _lblTitle = new Label();
-            _lblTitle.Font = new Font("맑은 고딕", 11.5F, FontStyle.Bold);
+            _lblTitle = SelectableText.Make(new Font("맑은 고딕", 11.5F, FontStyle.Bold), ForeColor, BackColor, false);
             _lblTitle.Location = new Point(14, 34);
             _lblTitle.Size = new Size(Width - 28, 26);
             _lblTitle.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _lblTitle.AutoEllipsis = true;
             _lblTitle.Text = _todo.Title;
 
-            _lblInfo = new Label();
-            _lblInfo.ForeColor = GrayText;
+            _lblInfo = SelectableText.Make(null, GrayText, BackColor, false);
             _lblInfo.Location = new Point(14, 62);
             _lblInfo.Size = new Size(Width - 28, 18);
             _lblInfo.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-            _lblNote = new Label();
-            _lblNote.ForeColor = Color.FromArgb(150, 154, 162);
-            _lblNote.Font = new Font("맑은 고딕", 8F);
+            _lblNote = SelectableText.Make(new Font("맑은 고딕", 8F), Color.FromArgb(150, 154, 162), BackColor, false);
             _lblNote.Location = new Point(14, 82);
             _lblNote.Size = new Size(Width - 28, 16);
             _lblNote.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
