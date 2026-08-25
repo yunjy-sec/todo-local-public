@@ -99,3 +99,7 @@ jobs:
           test\NlpTest.exe
           "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\SnapTest.exe src\Models.cs test\SnapTest.cs /r:System.Runtime.Serialization.dll /r:System.Xml.dll
           test\SnapTest.exe
+          "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\SettingsTest.exe src\Models.cs src\Json.cs src\Storage.cs test\SettingsTest.cs /r:System.Runtime.Serialization.dll /r:System.Xml.dll
+          test\SettingsTest.exe
+          "%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /codepage:65001 /out:test\PopupGroupTest.exe src\PopupGroup.cs test\PopupGroupTest.cs /r:System.Windows.Forms.dll /r:System.Drawing.dll
+          test\PopupGroupTest.exe

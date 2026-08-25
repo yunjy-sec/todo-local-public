@@ -107,6 +107,11 @@ namespace TodoPopup
             List<PopupForm> twins = new List<PopupForm>();
             PopupForm first = null;
 
+            // 한 화면의 창이 닫히면 그 알림은 끝난 것이다 — 나머지 화면의 쌍둥이도 함께
+            // 닫는다. 안 그러면 다른 모니터에 유령 팝업이 남아 버튼이 두 번 눌린다.
+            // 그 일과 **재귀 차단**은 PopupGroup 이 맡는다(왜인지는 그 파일 머리주석에).
+            PopupGroup group = new PopupGroup();
+
             foreach (Screen sc in targets)
             {
                 PopupForm pf = new PopupForm(todo, st, isPreview);
@@ -115,26 +120,19 @@ namespace TodoPopup
                 pf.ActionChosen += OnPopupAction;
                 twins.Add(pf);
                 if (first == null) first = pf;
-
-                PopupForm self = pf;
-                pf.FormClosed += delegate
-                {
-                    // 한 화면의 창이 닫히면 그 알림은 끝난 것이다 — 나머지 화면의 쌍둥이도
-                    // 함께 닫는다. 안 그러면 다른 모니터에 유령 팝업이 남아 버튼이 두 번 눌린다.
-                    foreach (PopupForm other in twins)
-                    {
-                        if (other == self) continue;
-                        try { if (!other.IsDisposed) other.Close(); }
-                        catch { }
-                    }
-                    PopupForm cur;
-                    if (_popups.TryGetValue(id, out cur) && cur == first)
-                    {
-                        _popups.Remove(id);
-                        RaiseChanged(); // 목록의 '알림중' 상태 즉시 갱신
-                    }
-                };
+                group.Add(pf);
             }
+
+            PopupForm firstOfGroup = first;
+            group.Finished = delegate
+            {
+                PopupForm cur;
+                if (_popups.TryGetValue(id, out cur) && cur == firstOfGroup)
+                {
+                    _popups.Remove(id);
+                    RaiseChanged(); // 목록의 '알림중' 상태 즉시 갱신
+                }
+            };
 
             _popups[id] = first;
             foreach (PopupForm pf in twins) pf.Show();

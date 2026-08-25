@@ -281,9 +281,31 @@ namespace TodoPopup
                 Color.FromArgb(140, 144, 152), bar.BackColor, false);
             lbl.Location = new Point(8, 2);
             lbl.Size = new Size(560, 14);
-            lbl.Text = "런타임: C# (TodoPopup.exe) · 빌드 " + BuildStampOf()
-                + " · node " + ProbeVersion("node") + " · npm " + ProbeVersion("npm");
+
+            // 런타임과 빌드 시각은 지금 당장 안다 — 이것만으로 "어느 판이 도는가" 는 답이 된다.
+            string head = "런타임: C# (TodoPopup.exe) · 빌드 " + BuildStampOf();
+            lbl.Text = head + " · node … · npm …";
             bar.Controls.Add(lbl);
+
+            // node/npm 조회는 **UI 스레드에서 하면 안 된다**. cmd.exe 를 두 번 띄우는데
+            // npm 은 Node 스크립트라 느린 기계에서 혼자 1~2초를 쓴다. 그 시간 동안 창이
+            // 아예 안 떴고, 사용자에게는 "프로그램 구동에 2초 이상 걸린다" 로 보였다.
+            // 배너는 진단용 곁다리지 시작을 붙들 이유가 없다 — 알아내면 그때 고쳐 쓴다.
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate
+            {
+                string tail;
+                try { tail = " · node " + ProbeVersion("node") + " · npm " + ProbeVersion("npm"); }
+                catch { tail = " · node ? · npm ?"; }
+                try
+                {
+                    if (lbl.IsDisposed) return;
+                    lbl.BeginInvoke((MethodInvoker)delegate
+                    {
+                        if (!lbl.IsDisposed) lbl.Text = head + tail;
+                    });
+                }
+                catch { } // 창이 그 사이에 닫혔다 — 진단 문구 하나 못 채운 것뿐이다
+            });
             return bar;
         }
 
