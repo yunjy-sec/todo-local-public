@@ -67,6 +67,13 @@ namespace TodoPopup
             {
                 ShowMain();
             }
+            else if (Program.ExitPleaseMessage != 0 && m.Msg == Program.ExitPleaseMessage)
+            {
+                // 다른 폴더의 복사본이 "자리를 넘겨 달라" 고 했다. 밖에서 이 앱을 곱게 끄는
+                // 방법은 없다 — taskkill 은 창 닫기가 취소돼 아무 일도 안 하고, 강제 종료는
+                // 저장 중인 것을 잃는다. 그래서 협조가 유일한 정상 경로다.
+                _ctx.ExitForHandover();
+            }
             base.WndProc(ref m);
         }
 

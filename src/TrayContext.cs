@@ -306,6 +306,21 @@ namespace TodoPopup
             _settingsForm.Show();
         }
 
+        /// <summary>다른 복사본이 자리를 이어받는다. 트레이 아이콘까지 확실히 걷고 나간다.</summary>
+        public void ExitForHandover()
+        {
+            ExitApp();
+        }
+
+        /// <summary>
+        /// 종료 요청을 받을 창의 핸들. 명패에 적어 두면 상대가 브로드캐스트 대신
+        /// 이 창을 콕 집어 부를 수 있다.
+        /// </summary>
+        public IntPtr MessageWindowHandle
+        {
+            get { return _mainForm != null ? _mainForm.Handle : IntPtr.Zero; }
+        }
+
         private void ExitApp()
         {
             _timer.Stop();
